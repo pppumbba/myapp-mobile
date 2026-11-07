@@ -59,9 +59,11 @@ class _StageQuerySheetState extends ConsumerState<StageQuerySheet> {
   }
 
   Future<void> _call(bool dryRun) async {
+    // Two taps in one frame both get here before the buttons rebuild disabled.
+    if (_busy) return;
+    _busy = true;
     final l = AppLocalizations.of(context);
     setState(() {
-      _busy = true;
       _message = null;
       _error = false;
     });

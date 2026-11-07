@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wand_mobile/api/client.dart';
 import 'package:wand_mobile/api/models.dart';
 import 'package:wand_mobile/app.dart';
 import 'package:wand_mobile/auth/session.dart';
+import 'package:wand_mobile/form/form_screen.dart';
 import 'package:wand_mobile/l10n/app_localizations.dart';
 import 'package:wand_mobile/meta/defs.dart';
 import 'package:wand_mobile/nav/menu.dart';
@@ -32,12 +35,19 @@ MenuEntry entry(int id, String name, [String? group]) =>
 
 Future<(ProviderContainer, NotifierProvider<MenuHolder, MobileMenu>)> pumpShell(
   WidgetTester tester,
-  MobileMenu menu,
+  MobileMenu menu, {
+  bool menuFails = false,
+  List<Override> extra = const [],
+}
 ) async {
   final holder = NotifierProvider<MenuHolder, MobileMenu>(() => MenuHolder(menu));
   final container = ProviderContainer(overrides: [
     sessionProvider.overrideWith(SignedIn.new),
-    mobileMenuProvider.overrideWith((ref) async => ref.watch(holder)),
+    mobileMenuProvider.overrideWith((ref) async {
+      if (menuFails) throw ApiError(0, defaultUnreachableMessage);
+      return ref.watch(holder);
+    }),
+    ...extra,
     for (final id in [1, 2, 3, 4, 5])
       metaDefProvider(id).overrideWith((ref) async => MetaDef(Meta(id: id, name: 'M$id', type: 'dashboard'), const [])),
   ]);
@@ -62,6 +72,7 @@ Future<(ProviderContainer, NotifierProvider<MenuHolder, MobileMenu>)> pumpShell(
 Finder inBar(String text) => find.descendant(of: find.byType(NavigationBar), matching: find.text(text));
 
 void main() {
+  pushedPageTests();
   testWidgets('3 tabs plus More: opens a More screen with back button', (tester) async {
     await pumpShell(
       tester,
@@ -135,5 +146,38 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     expect(find.text('M1'), findsOneWidget);
+  });
+}
+
+void pushedPageTests() {
+  testWidgets('a form opened from a tab covers the shell: no NavigationBar, one app bar', (tester) async {
+    await pumpShell(
+      tester,
+      MobileMenu([entry(1, 'Orders'), entry(2, 'Items')], const []),
+      extra: [
+        metaDefProvider(9).overrideWith((ref) async => MetaDef(
+              Meta(id: 9, name: 'Order form', type: 'form'),
+              [MetaParam(id: 1, paramName: 'title', labelName: 'Title', dataType: 'string', isShow: true)],
+            )),
+      ],
+    );
+    expect(find.byType(NavigationBar), findsOneWidget);
+    bool? result;
+    openForm(tester.element(find.text('M1')), formMetaId: 9).then((r) => result = r);
+    await tester.pumpAndSettle();
+    expect(find.text('Order form'), findsOneWidget);
+    expect(find.byType(NavigationBar), findsNothing);
+    expect(find.byType(AppBar), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(result, isFalse);
+    expect(find.byType(NavigationBar), findsOneWidget);
+  });
+
+  testWidgets('an offline menu load shows the unreachable message and Retry', (tester) async {
+    await pumpShell(tester, MobileMenu([entry(1, 'Orders')], const []), menuFails: true);
+    expect(find.text(defaultUnreachableMessage), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
   });
 }

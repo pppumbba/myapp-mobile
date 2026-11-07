@@ -109,10 +109,13 @@ Map<String, Handler> routes({bool mandatory = false, Map<String, dynamic> Functi
 
 Iterable<RequestOptions> dataCalls(Adapter a) => a.seen.where((o) => o.method == 'GET' && o.uri.path == '/api/metas/131/data');
 
-Future<Adapter> pumpGrid(WidgetTester tester, Map<String, Handler> r) async {
+/// The client of the last [pumpGrid], to fire writes from a test.
+late ApiClient lastClient;
+
+Future<Adapter> pumpGrid(WidgetTester tester, Map<String, Handler> r, {Map<String, String> filters = const {}}) async {
   final adapter = Adapter(r);
   final config = AppConfig(appMetaId: 5, apiBase: 'https://h/api');
-  final client = ApiClient(config, dio: Dio()..httpClientAdapter = adapter);
+  final client = lastClient = ApiClient(config, dio: Dio()..httpClientAdapter = adapter);
   final c = ProviderContainer(overrides: [
     appConfigProvider.overrideWithValue(config),
     apiClientProvider.overrideWithValue(client),
@@ -121,10 +124,10 @@ Future<Adapter> pumpGrid(WidgetTester tester, Map<String, Handler> r) async {
   addTearDown(c.dispose);
   await tester.pumpWidget(UncontrolledProviderScope(
     container: c,
-    child: const MaterialApp(
-      localizationsDelegates: [AppLocalizations.delegate, GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate],
+    child: MaterialApp(
+      localizationsDelegates: const [AppLocalizations.delegate, GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate],
       supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(body: GridScreen(metaId: 131)),
+      home: Scaffold(body: GridScreen(metaId: 131, filters: filters)),
     ),
   ));
   await tester.pumpAndSettle();
@@ -132,6 +135,8 @@ Future<Adapter> pumpGrid(WidgetTester tester, Map<String, Handler> r) async {
 }
 
 void main() {
+  lookupChipTests();
+  stageQueryGuardTests();
   testWidgets('grid shows cards with lookup text, never the raw id', (tester) async {
     await pumpGrid(tester, routes());
     expect(find.text('WO-7'), findsOneWidget);
@@ -346,5 +351,58 @@ void main() {
 
   test('MetaParam has the mandatory flag', () {
     expect(MetaParam.fromJson(gridParams(mandatory: true)[3]).isMandatoryCriteria, true);
+  });
+}
+
+void stageQueryGuardTests() {
+  testWidgets('stage query: two taps on Check in the same frame send one POST', (tester) async {
+    var posts = 0;
+    final r = routes()
+      ..['GET /api/metas/130'] = ((_) => (200, {'id': 130, 'type': 'stage_query', 'name': 'Complete', 'json_config': {}}))
+      ..['GET /api/metas/130/params'] = ((_) => (200, [gp(1, 'work_order_id', 'Work order id', type: 'integer')]))
+      ..['POST /api/metas/130/run'] = (o) {
+        posts++;
+        return (200, {'affected': 1, 'statements': [1], 'dry_run': true});
+      };
+    await pumpGrid(tester, r);
+    await tester.tap(find.byTooltip('More'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Complete'));
+    await tester.pumpAndSettle();
+    final check = find.widgetWithText(OutlinedButton, 'Check');
+    await tester.tap(check);
+    await tester.tap(check);
+    await tester.pumpAndSettle();
+    expect(posts, 1);
+  });
+}
+
+void lookupChipTests() {
+  testWidgets('a lookup filter chip shows the label at start and after a write, never "…"', (tester) async {
+    final r = routes()
+      ..['GET /api/metas/131/params'] = ((_) => (200, [
+            ...gridParams().take(4),
+            // Not a card column: only the filter needs its label.
+            gp(5, 'asset_id', 'Asset', type: 'integer', select: true, ref: 127, criteria: true, show: false),
+          ]))
+      ..['GET /api/metas/127/data'] = ((_) => (200, {
+            'data': [
+              {'id': 5, 'name': 'Pump 1'},
+              {'id': 6, 'name': 'Boiler'},
+            ],
+            'current_page': 1,
+            'last_page': 1,
+          }))
+      ..['POST /api/metas/1/touch'] = ((_) => (200, {'ok': true}));
+    await pumpGrid(tester, r, filters: {'asset_id': '6'});
+    expect(find.widgetWithText(InputChip, 'Asset: Boiler'), findsOneWidget);
+
+    // Any write clears the lookup cache. Not awaited first: the fake clock only moves on pumps.
+    final write = lastClient.post<dynamic>('/metas/1/touch', {});
+    await tester.pumpAndSettle();
+    await write;
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(InputChip, 'Asset: Boiler'), findsOneWidget);
+    expect(find.textContaining('…'), findsNothing);
   });
 }

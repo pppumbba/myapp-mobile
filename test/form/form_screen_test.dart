@@ -117,6 +117,7 @@ Future<void> pumpOpener(WidgetTester tester, ProviderContainer c, int formId, vo
 }
 
 void main() {
+  moreFormTests();
   testWidgets('work order form shows required marks and blocks save until filled', (tester) async {
     final posted = <String, dynamic>{};
     final (c, a) = setup(workOrderRoutes(posted: posted));
@@ -270,5 +271,41 @@ void main() {
     expect(find.text('Beta'), findsOneWidget);
     expect(find.text('Save'), findsOneWidget);
     expect(find.text('Back'), findsOneWidget);
+  });
+}
+
+void moreFormTests() {
+  testWidgets('two taps on Save in the same frame send one POST', (tester) async {
+    var posts = 0;
+    final (c, _) = setup({
+      'GET /api/metas/43': (_) => (200, {'id': 43, 'type': 'form', 'name': 'Notes', 'json_config': {'save_and_add': false}}),
+      'GET /api/metas/43/params': (_) => (200, [p(1, 'title', 'Title', 'string')]),
+      'POST /api/metas/43/data': (_) {
+        posts++;
+        return (201, {'id': 1});
+      },
+    });
+    await pumpOpener(tester, c, 43, (_) {});
+    await tester.tap(find.text('Save'));
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(posts, 1);
+  });
+
+  testWidgets('a 422 on a field low in a long form shows the banner and scrolls to the field', (tester) async {
+    final (c, _) = setup({
+      'GET /api/metas/44': (_) => (200, {'id': 44, 'type': 'form', 'name': 'Long'}),
+      'GET /api/metas/44/params': (_) => (200, [for (var i = 1; i <= 30; i++) p(i, 'f$i', 'Field $i', 'string')]),
+      'POST /api/metas/44/data': (_) => (422, {
+            'message': 'Field 30 is wrong.',
+            'errors': {'f30': ['Field 30 is wrong.']},
+          }),
+    });
+    await pumpOpener(tester, c, 44, (_) {});
+    expect(find.text('Field 30').hitTestable(), findsNothing);
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(find.text('Check the marked fields.'), findsOneWidget);
+    expect(find.text('Field 30 is wrong.').hitTestable(), findsOneWidget);
   });
 }

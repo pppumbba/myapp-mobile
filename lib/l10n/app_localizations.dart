@@ -397,6 +397,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The query could not run.'**
   String get stageFailed;
+
+  /// No description provided for @fixErrors.
+  ///
+  /// In en, this message translates to:
+  /// **'Check the marked fields.'**
+  String get fixErrors;
 }
 
 class _AppLocalizationsDelegate

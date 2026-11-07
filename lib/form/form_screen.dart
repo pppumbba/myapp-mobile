@@ -23,7 +23,8 @@ Future<bool> openForm(
   Map<String, String> defaults = const {},
   bool readOnly = false,
 }) async {
-  final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(
+  // On the root navigator, so the form covers the shell's app bar and tabs (as the drilldown does).
+  final saved = await Navigator.of(context, rootNavigator: true).push<bool>(MaterialPageRoute(
     builder: (_) => FormScreen(
       formMetaId: formMetaId,
       recordId: recordId,
@@ -73,6 +74,8 @@ class _FormScreenState extends ConsumerState<FormScreen> with TickerProviderStat
   bool _savedAny = false;
   int _step = 0;
   TabController? _tabs;
+  // One key per field path, to scroll to the first error.
+  final Map<String, GlobalKey> _fieldKeys = {};
 
   // Autonumber previews of a new record, by field path.
   Map<String, String> _preview = const {};
@@ -201,11 +204,22 @@ class _FormScreenState extends ConsumerState<FormScreen> with TickerProviderStat
     if (_tabs != null && _tabs!.index != i && i < _tabs!.length) _tabs!.animateTo(i);
   }
 
-  /// Shows the first group holding an error.
+  /// Shows the first group holding an error, then scrolls its first error field into view.
   void _showErrorGroup(List<FormGroup> groups) {
-    if (!_isGrouped(groups)) return;
-    final i = groups.indexWhere((g) => g.fields.any((p) => _errors.byField.containsKey(pathOf(p))));
-    if (i >= 0) _goTo(i);
+    if (_isGrouped(groups)) {
+      final i = groups.indexWhere((g) => g.fields.any((p) => _errors.byField.containsKey(pathOf(p))));
+      if (i >= 0) _goTo(i);
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      for (final p in _fields) {
+        if (!_errors.byField.containsKey(pathOf(p))) continue;
+        final ctx = _fieldKeys[pathOf(p)]?.currentContext;
+        if (ctx == null) continue; // in another tab or step
+        Scrollable.ensureVisible(ctx, alignment: 0.1, duration: const Duration(milliseconds: 250));
+        return;
+      }
+    });
   }
 
   void _next(List<FormGroup> groups) {
@@ -224,6 +238,8 @@ class _FormScreenState extends ConsumerState<FormScreen> with TickerProviderStat
   // --- Save ---------------------------------------------------------------------------------
 
   Future<void> _submit({required bool add}) async {
+    // Two taps in one frame both get here before the button rebuilds disabled.
+    if (_saving) return;
     final l = AppLocalizations.of(context);
     final groups = _groups(l);
     final missing = missingRequired(_fields, _values, widget.fixed.keys.toSet());
@@ -265,9 +281,13 @@ class _FormScreenState extends ConsumerState<FormScreen> with TickerProviderStat
       _scheduleAutonumber(force: true);
     } on ApiError catch (e) {
       if (!mounted) return;
+      final mapped = mapErrors(e, {for (final p in _fields) pathOf(p)});
       setState(() {
         _saving = false;
-        _errors = mapErrors(e, {for (final p in _fields) pathOf(p)});
+        // Every key under its field: still say so at the top, or Save looks like it did nothing.
+        _errors = mapped.banner == null && mapped.byField.isNotEmpty
+            ? FieldErrors(banner: l.fixErrors, byField: mapped.byField)
+            : mapped;
       });
       _showErrorGroup(groups);
     } catch (_) {
@@ -281,7 +301,10 @@ class _FormScreenState extends ConsumerState<FormScreen> with TickerProviderStat
 
   // --- Build --------------------------------------------------------------------------------
 
-  Widget _field(MetaParam p, AppLocalizations l) {
+  Widget _field(MetaParam p, AppLocalizations l) =>
+      KeyedSubtree(key: _fieldKeys.putIfAbsent(pathOf(p), GlobalKey.new), child: _input(p, l));
+
+  Widget _input(MetaParam p, AppLocalizations l) {
     final path = pathOf(p);
     final error = _errors.byField[path];
     if (isAutoReadOnly(p)) {
@@ -308,11 +331,12 @@ class _FormScreenState extends ConsumerState<FormScreen> with TickerProviderStat
     );
   }
 
-  Widget _list(List<Widget> children) => ListView(
+  // Not a lazy ListView: every field is built, so an error field low in the form can be scrolled to.
+  Widget _list(List<Widget> children) => SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-        children: [
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           for (final c in children) Padding(padding: const EdgeInsets.only(bottom: 16), child: c),
-        ],
+        ]),
       );
 
   Widget _body(AppLocalizations l, List<FormGroup> groups) {

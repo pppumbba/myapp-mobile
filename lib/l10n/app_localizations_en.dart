@@ -171,4 +171,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get stageFailed => 'The query could not run.';
+
+  @override
+  String get fixErrors => 'Check the marked fields.';
 }

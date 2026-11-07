@@ -175,12 +175,7 @@ class _GridScreenState extends ConsumerState<GridScreen> {
     return DataPage.fromJson(Map<String, dynamic>.from(r as Map));
   }
 
-  /// A card column's lookup, from the param itself (filter_as is only for filters).
-  static LookupSpec? _cellSpec(MetaParam p) {
-    if (!isLookup(p)) return null;
-    final f = lookupFields(p);
-    return LookupSpec(gridMetaId: p.refMetaId!, valueField: f.value, displayField: f.label);
-  }
+  static LookupSpec? _cellSpec(MetaParam p) => cellSpecOf(p);
 
   List<MetaParam> get _cardParams {
     final s = _slots;
@@ -202,7 +197,21 @@ class _GridScreenState extends ConsumerState<GridScreen> {
         }
       }));
     }
+    // Lookup filter values, so their chips show the label, not "…" (filter_as applies here).
+    for (final fp in _filters) {
+      final v = _q.filter[pathOf(fp)];
+      final spec = isLookup(fp) ? lookupSpecOf(fp) : null;
+      if (v == null || v.isEmpty || spec == null) continue;
+      jobs.add(svc.prefetch(spec, [v]));
+    }
     await Future.wait(jobs);
+  }
+
+  /// A row's title: the title slot's cell text (lookups and numbers formatted), else rowLabel.
+  String _rowTitle(Map<String, dynamic> row) {
+    final t = _slots.title;
+    final text = t == null ? '' : cellText(t, row, lookupText: _lookupText, l10n: AppLocalizations.of(context));
+    return text.isNotEmpty ? text : rowLabel(row, t?.paramName);
   }
 
   String? _lookupText(MetaParam p, Object? value) {
@@ -270,7 +279,7 @@ class _GridScreenState extends ConsumerState<GridScreen> {
     if (d != null) {
       await Navigator.of(context, rootNavigator: true).push(MaterialPageRoute<void>(
         builder: (_) => Scaffold(
-          appBar: AppBar(title: Text(d.label ?? rowLabel(row, _slots.title?.paramName))),
+          appBar: AppBar(title: Text(d.label ?? _rowTitle(row))),
           body: ScreenView(metaId: d.metaId, fixed: drillParams(d.params, row)),
         ),
       ));
@@ -297,7 +306,7 @@ class _GridScreenState extends ConsumerState<GridScreen> {
         child: ListView(shrinkWrap: true, children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Text(rowLabel(row, _slots.title?.paramName), style: Theme.of(ctx).textTheme.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
+            child: Text(_rowTitle(row), style: Theme.of(ctx).textTheme.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
           ),
           for (final a in actions)
             ListTile(

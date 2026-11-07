@@ -171,4 +171,7 @@ class AppLocalizationsMn extends AppLocalizations {
 
   @override
   String get stageFailed => 'Асуулгыг ажиллуулж чадсангүй.';
+
+  @override
+  String get fixErrors => 'Тэмдэглэсэн талбаруудыг шалгана уу.';
 }

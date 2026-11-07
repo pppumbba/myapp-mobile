@@ -76,5 +76,6 @@
       "n": {"type": "int"}
     }
   },
-  "stageFailed": "The query could not run."
+  "stageFailed": "The query could not run.",
+  "fixErrors": "Check the marked fields."
 }

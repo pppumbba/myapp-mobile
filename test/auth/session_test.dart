@@ -2,11 +2,16 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wand_mobile/api/client.dart';
+import 'package:wand_mobile/app.dart';
 import 'package:wand_mobile/auth/session.dart';
+import 'package:wand_mobile/auth/sign_in_page.dart';
 import 'package:wand_mobile/config.dart';
+import 'package:wand_mobile/l10n/app_localizations.dart';
 
 class FakeAdapter implements HttpClientAdapter {
   final List<RequestOptions> seen = [];
@@ -74,6 +79,7 @@ const userRoutes = <String, (int, Object)>{
 }
 
 void main() {
+  restoreTests();
   test('signIn uses bound token when one customer', () async {
     final t = setup({
       'POST /api/login': (200, {
@@ -246,5 +252,75 @@ void main() {
     expect(seen, isNotEmpty);
     expect(seen.every((x) => x), true);
     expect(t.c.read(sessionProvider).signedIn, true);
+  });
+}
+
+/// Fails every /user call as if offline while [down].
+class FlakyAdapter extends FakeAdapter {
+  bool down = true;
+  FlakyAdapter(super.routes);
+
+  @override
+  Future<ResponseBody> fetch(RequestOptions o, Stream<Uint8List>? s, Future<void>? c) {
+    if (down && o.uri.path.startsWith('/api/user')) {
+      seen.add(o);
+      throw Exception('offline');
+    }
+    return super.fetch(o, s, c);
+  }
+}
+
+void restoreTests() {
+  test('while a saved token is restored the redirect stays on /splash', () async {
+    final t = setup(userRoutes, token: 'SAVED');
+    final targets = <String?>[];
+    t.c.listen(sessionProvider, (_, n) {
+      if (!n.signedIn) targets.add(sessionRedirect(n, '/splash'));
+    });
+    await t.c.read(sessionProvider.notifier).start();
+    expect(targets, isNotEmpty);
+    expect(targets.every((x) => x == null), true, reason: '$targets');
+    expect(sessionRedirect(t.c.read(sessionProvider), '/splash'), '/t/0');
+    // Not restoring and no token: sign-in.
+    expect(sessionRedirect(SessionState(info: MobileInfo(id: 5, name: 'Shop')), '/splash'), '/sign-in');
+  });
+
+  testWidgets('an offline restore keeps the token and shows Retry, which signs in once back online', (tester) async {
+    final adapter = FlakyAdapter({'GET /api/mobile/5': mobile, ...userRoutes});
+    final config = AppConfig(appMetaId: 5, apiBase: 'https://h/api');
+    final client = ApiClient(config, dio: Dio()..httpClientAdapter = adapter);
+    final storage = MemoryStorage('SAVED');
+    final c = ProviderContainer(overrides: [
+      appConfigProvider.overrideWithValue(config),
+      apiClientProvider.overrideWithValue(client),
+      tokenStorageProvider.overrideWithValue(storage),
+    ]);
+    addTearDown(c.dispose);
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: c,
+      child: const MaterialApp(
+        localizationsDelegates: [AppLocalizations.delegate, GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: SplashPage(),
+      ),
+    ));
+    await tester.runAsync(() => c.read(sessionProvider.notifier).start());
+    await tester.pumpAndSettle();
+    final s = c.read(sessionProvider);
+    expect(s.signedIn, false);
+    expect(sessionRedirect(s, '/splash'), isNull);
+    expect(storage.value, 'SAVED');
+    expect(client.token, 'SAVED');
+    expect(find.text(defaultUnreachableMessage), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
+
+    adapter.down = false;
+    await tester.tap(find.text('Retry'));
+    // Signed in, the splash spins until the router leaves it: pump instead of settling.
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+    expect(c.read(sessionProvider).signedIn, true);
+    expect(sessionRedirect(c.read(sessionProvider), '/splash'), '/t/0');
   });
 }

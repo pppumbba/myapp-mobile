@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../api/client.dart';
 import '../auth/session.dart';
 import '../l10n/app_localizations.dart';
 import '../meta/defs.dart';
@@ -113,7 +114,7 @@ class AppShell extends ConsumerWidget {
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Text(l.somethingWrong, textAlign: TextAlign.center),
+              Text(e is ApiError ? e.message : l.somethingWrong, textAlign: TextAlign.center),
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: () {

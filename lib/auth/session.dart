@@ -94,6 +94,10 @@ class SessionState {
   final bool loading;
   final String? error;
 
+  /// A saved token is being restored (or its restore failed without a 401): the app stays on
+  /// the splash, with Retry on an error, instead of showing sign-in.
+  final bool restoring;
+
   const SessionState({
     this.info,
     this.user,
@@ -101,6 +105,7 @@ class SessionState {
     this.sessionValues = const {},
     this.loading = false,
     this.error,
+    this.restoring = false,
   });
 
   bool get signedIn => user != null;
@@ -112,6 +117,7 @@ class SessionState {
         sessionValues: sessionValues,
         loading: loading ?? this.loading,
         error: clearError ? null : (error ?? this.error),
+        restoring: restoring,
       );
 }
 
@@ -137,24 +143,28 @@ class SessionController extends Notifier<SessionState> {
     state = _signedOut();
   }
 
+  /// Loads the app info and restores a saved token. Only a 401 (or no token) leads to sign-in;
+  /// a restore that fails otherwise (offline, 5xx) keeps the token and stays on the splash with
+  /// Retry, which calls [start] again.
   Future<void> start() async {
-    state = SessionState(loading: true, info: state.info);
+    final saved = await _storage.read();
+    final hasToken = saved != null && saved.isNotEmpty;
+    state = SessionState(loading: true, info: state.info, restoring: hasToken);
     try {
       final j = await _client.get<Map<String, dynamic>>('/mobile/${ref.read(appConfigProvider).appMetaId}', guest: true);
       final info = MobileInfo.fromJson(j);
-      state = SessionState(loading: true, info: info);
-      final saved = await _storage.read();
-      if (saved != null && saved.isNotEmpty) {
+      if (hasToken) {
+        state = SessionState(loading: true, info: info, restoring: true);
         _client.token = saved;
         await loadUser();
       } else {
         state = SessionState(info: info);
       }
     } on ApiError catch (e) {
-      state = SessionState(error: e.message);
+      state = SessionState(error: e.message, restoring: hasToken);
     } catch (_) {
       _client.token = null;
-      state = SessionState(info: state.info, error: deviceStrings().somethingWrong);
+      state = SessionState(info: state.info, error: deviceStrings().somethingWrong, restoring: hasToken);
     }
   }
 

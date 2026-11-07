@@ -14,7 +14,8 @@ import 'lookup.dart';
 
 /// Opens the lookup grid full screen; resolves to the tapped row, or null when dismissed.
 Future<Map<String, dynamic>?> pickLookup(BuildContext context, LookupSpec s, {Map<String, String> filters = const {}}) =>
-    Navigator.of(context).push<Map<String, dynamic>>(MaterialPageRoute(builder: (_) => LookupPage(spec: s, filters: filters)));
+    // On the root navigator, so the picker covers the shell's app bar and tabs.
+    Navigator.of(context, rootNavigator: true).push<Map<String, dynamic>>(MaterialPageRoute(builder: (_) => LookupPage(spec: s, filters: filters)));
 
 class LookupPage extends ConsumerStatefulWidget {
   final LookupSpec spec;
@@ -78,6 +79,8 @@ class _LookupPageState extends ConsumerState<LookupPage> {
       });
       if (!mounted || gen != _gen) return;
       final p = DataPage.fromJson(Map<String, dynamic>.from(r as Map));
+      await _prefetch(p.rows);
+      if (!mounted || gen != _gen) return;
       setState(() {
         _rows.addAll(p.rows);
         _page = p.currentPage;
@@ -90,6 +93,21 @@ class _LookupPageState extends ConsumerState<LookupPage> {
         _error = e;
         _loading = false;
       });
+    }
+  }
+
+  /// Resolves the page's lookup columns before it shows, as the grid does, so cards never show `#12`.
+  Future<void> _prefetch(List<Map<String, dynamic>> rows) async {
+    try {
+      final def = await ref.read(metaDefProvider(widget.spec.gridMetaId).future);
+      final s = cardSlots(def.params);
+      final svc = ref.read(lookupServiceProvider);
+      await Future.wait([
+        for (final p in [?s.title, ?s.subtitle, ?s.badge, ...s.body, ...s.footer])
+          if (cellSpecOf(p) case final spec?) svc.prefetch(spec, [for (final r in rows) r[p.paramName]]),
+      ]);
+    } catch (_) {
+      // No definition: the cards still show, with ids.
     }
   }
 
@@ -136,7 +154,7 @@ class _LookupPageState extends ConsumerState<LookupPage> {
             row: row,
             onTap: () => Navigator.of(context).pop(row),
             lookupText: (p, v) {
-              final sp = lookupSpecOf(p);
+              final sp = cellSpecOf(p);
               return sp == null ? null : svc.cachedText(sp, v);
             },
           );

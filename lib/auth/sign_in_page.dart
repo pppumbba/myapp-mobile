@@ -83,7 +83,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                       alignment: Alignment.center,
                       decoration: BoxDecoration(color: scheme.primary, borderRadius: BorderRadius.circular(16)),
                       child: Text(
-                        (s.info?.name ?? '?').characters.first.toUpperCase(),
+                        (s.info?.name ?? '').characters.firstOrNull?.toUpperCase() ?? '?',
                         style: TextStyle(color: scheme.onPrimary, fontSize: 28, fontWeight: FontWeight.bold),
                       ),
                     ),

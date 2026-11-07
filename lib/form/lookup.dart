@@ -40,6 +40,13 @@ LookupSpec? lookupSpecOf(MetaParam p) {
   );
 }
 
+/// A card column's lookup, from the param itself (filter_as is only for filters).
+LookupSpec? cellSpecOf(MetaParam p) {
+  if (!isLookup(p)) return null;
+  final f = lookupFields(p);
+  return LookupSpec(gridMetaId: p.refMetaId!, valueField: f.value, displayField: f.label);
+}
+
 /// Resolves the display text of looked-up values and remembers it until [clear].
 class LookupService {
   final ApiClient _client;

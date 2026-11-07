@@ -9,11 +9,13 @@ import 'l10n/app_localizations.dart';
 import 'nav/shell.dart';
 
 
+/// Signed in: off the splash and sign-in pages. Otherwise the splash while the app info loads or a
+/// saved token is restored (its error shows Retry there), and sign-in only once there is no token.
 String? sessionRedirect(SessionState s, String location) {
-  final target = s.info == null ? '/splash' : (s.signedIn ? landingLocation : '/sign-in');
   if (s.signedIn) {
     return (location == '/splash' || location == '/sign-in') ? landingLocation : null;
   }
+  final target = s.info == null || s.restoring ? '/splash' : '/sign-in';
   return location == target ? null : target;
 }
 
