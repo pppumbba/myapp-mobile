@@ -84,4 +84,11 @@ void main() {
     expect(b.displayAs, isNull);
     expect(MetaParam.fromJson({'id': 3, 'param_name': 'c'}).isSelect, false);
   });
+
+  test('is_mandatory_criteria parses true/false and 1/0', () {
+    expect(MetaParam.fromJson({'id': 1, 'param_name': 'a', 'is_mandatory_criteria': 1}).isMandatoryCriteria, true);
+    expect(MetaParam.fromJson({'id': 2, 'param_name': 'b', 'is_mandatory_criteria': true}).isMandatoryCriteria, true);
+    expect(MetaParam.fromJson({'id': 3, 'param_name': 'c', 'is_mandatory_criteria': 0}).isMandatoryCriteria, false);
+    expect(MetaParam.fromJson({'id': 4, 'param_name': 'd'}).isMandatoryCriteria, false);
+  });
 }

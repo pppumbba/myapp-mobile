@@ -120,4 +120,55 @@ class AppLocalizationsMn extends AppLocalizations {
   String stepOf(int step, int total) {
     return '$total алхмын $step-р алхам';
   }
+
+  @override
+  String get filter => 'Шүүлтүүр';
+
+  @override
+  String get apply => 'Хэрэглэх';
+
+  @override
+  String get add => 'Нэмэх';
+
+  @override
+  String get actions => 'Үйлдлүүд';
+
+  @override
+  String get cancel => 'Болих';
+
+  @override
+  String get close => 'Хаах';
+
+  @override
+  String get delete => 'Устгах';
+
+  @override
+  String get deleteConfirm => 'Устгах уу?';
+
+  @override
+  String get check => 'Шалгах';
+
+  @override
+  String get run => 'Ажиллуулах';
+
+  @override
+  String filterFirst(String labels) {
+    return 'Эхлээд шүүлтүүр сонгоно уу: $labels';
+  }
+
+  @override
+  String get stageNothing => 'Өөрчлөх зүйл алга: тохирох мөр олдсонгүй.';
+
+  @override
+  String stageWillChange(int n) {
+    return '$n мөр өөрчлөгдөнө. Ажиллуулах уу?';
+  }
+
+  @override
+  String stageDone(int n) {
+    return 'Боллоо: $n мөр өөрчлөгдлөө.';
+  }
+
+  @override
+  String get stageFailed => 'Асуулгыг ажиллуулж чадсангүй.';
 }

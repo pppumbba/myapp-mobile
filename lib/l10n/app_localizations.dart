@@ -307,6 +307,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Step {step} of {total}'**
   String stepOf(int step, int total);
+
+  /// No description provided for @filter.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter'**
+  String get filter;
+
+  /// No description provided for @apply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get apply;
+
+  /// No description provided for @add.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get add;
+
+  /// No description provided for @actions.
+  ///
+  /// In en, this message translates to:
+  /// **'Actions'**
+  String get actions;
+
+  /// No description provided for @cancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancel;
+
+  /// No description provided for @close.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get close;
+
+  /// No description provided for @delete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get delete;
+
+  /// No description provided for @deleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete?'**
+  String get deleteConfirm;
+
+  /// No description provided for @check.
+  ///
+  /// In en, this message translates to:
+  /// **'Check'**
+  String get check;
+
+  /// No description provided for @run.
+  ///
+  /// In en, this message translates to:
+  /// **'Run'**
+  String get run;
+
+  /// No description provided for @filterFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a filter first: {labels}'**
+  String filterFirst(String labels);
+
+  /// No description provided for @stageNothing.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to change: no rows match.'**
+  String get stageNothing;
+
+  /// No description provided for @stageWillChange.
+  ///
+  /// In en, this message translates to:
+  /// **'This will change {n} rows. Run it?'**
+  String stageWillChange(int n);
+
+  /// No description provided for @stageDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done: {n} rows changed.'**
+  String stageDone(int n);
+
+  /// No description provided for @stageFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The query could not run.'**
+  String get stageFailed;
 }
 
 class _AppLocalizationsDelegate

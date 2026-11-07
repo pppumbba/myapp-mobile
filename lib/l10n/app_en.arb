@@ -46,5 +46,35 @@
       "step": {"type": "int"},
       "total": {"type": "int"}
     }
-  }
+  },
+  "filter": "Filter",
+  "apply": "Apply",
+  "add": "Add",
+  "actions": "Actions",
+  "cancel": "Cancel",
+  "close": "Close",
+  "delete": "Delete",
+  "deleteConfirm": "Delete?",
+  "check": "Check",
+  "run": "Run",
+  "filterFirst": "Choose a filter first: {labels}",
+  "@filterFirst": {
+    "placeholders": {
+      "labels": {"type": "String"}
+    }
+  },
+  "stageNothing": "Nothing to change: no rows match.",
+  "stageWillChange": "This will change {n} rows. Run it?",
+  "@stageWillChange": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "stageDone": "Done: {n} rows changed.",
+  "@stageDone": {
+    "placeholders": {
+      "n": {"type": "int"}
+    }
+  },
+  "stageFailed": "The query could not run."
 }

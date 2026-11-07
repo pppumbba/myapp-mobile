@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/client.dart';
 import '../api/models.dart';
 import '../form/form_screen.dart';
+import '../grid/grid_screen.dart';
 import '../l10n/app_localizations.dart';
 import '../meta/defs.dart';
 import 'open_on_web.dart';
@@ -33,41 +34,15 @@ class ScreenView extends ConsumerWidget {
   }
 }
 
-/// The single switch on `meta.type`: Task 7 fills in the grid; a form opens as a new record.
+/// The single switch on `meta.type`: a grid as cards; a form opens as a new record.
 Widget screenFor(Meta meta, {Map<String, String> fixed = const {}, Map<String, String> filters = const {}}) {
   switch (meta.type) {
     case 'datagrid':
-      return _ComingSoon(meta); // GridScreen (Task 7)
+      return GridScreen(key: ValueKey(meta.id), metaId: meta.id, fixed: fixed, filters: filters);
     case 'form':
       return FormScreen(key: ValueKey(meta.id), formMetaId: meta.id, fixed: fixed);
     default:
       return OpenOnWeb(meta);
-  }
-}
-
-class _ComingSoon extends StatelessWidget {
-  final Meta meta;
-  const _ComingSoon(this.meta);
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return Center(
-      child: Card(
-        margin: const EdgeInsets.all(24),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(meta.name ?? '', style: Theme.of(context).textTheme.titleMedium, textAlign: TextAlign.center),
-              const SizedBox(height: 8),
-              Text(l.comingSoon),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }
 

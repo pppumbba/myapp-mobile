@@ -58,6 +58,7 @@ class MetaParam {
   final bool isShow;
   final bool isRequired;
   final bool isCriteria;
+  final bool isMandatoryCriteria;
   final bool isLabel;
   final bool isSelect;
   final String? displayAs;
@@ -84,6 +85,7 @@ class MetaParam {
     this.isShow = true,
     this.isRequired = false,
     this.isCriteria = false,
+    this.isMandatoryCriteria = false,
     this.isLabel = false,
     this.isSelect = false,
     this.displayAs,
@@ -113,6 +115,7 @@ class MetaParam {
         isShow: j.containsKey('is_show') ? _bool(j['is_show']) : true,
         isRequired: _bool(j['is_required']),
         isCriteria: _bool(j['is_criteria']),
+        isMandatoryCriteria: _bool(j['is_mandatory_criteria']),
         isLabel: _bool(j['is_label']),
         isSelect: _bool(j['is_select']),
         displayAs: j['display_as'] as String?,

@@ -120,4 +120,55 @@ class AppLocalizationsEn extends AppLocalizations {
   String stepOf(int step, int total) {
     return 'Step $step of $total';
   }
+
+  @override
+  String get filter => 'Filter';
+
+  @override
+  String get apply => 'Apply';
+
+  @override
+  String get add => 'Add';
+
+  @override
+  String get actions => 'Actions';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String get close => 'Close';
+
+  @override
+  String get delete => 'Delete';
+
+  @override
+  String get deleteConfirm => 'Delete?';
+
+  @override
+  String get check => 'Check';
+
+  @override
+  String get run => 'Run';
+
+  @override
+  String filterFirst(String labels) {
+    return 'Choose a filter first: $labels';
+  }
+
+  @override
+  String get stageNothing => 'Nothing to change: no rows match.';
+
+  @override
+  String stageWillChange(int n) {
+    return 'This will change $n rows. Run it?';
+  }
+
+  @override
+  String stageDone(int n) {
+    return 'Done: $n rows changed.';
+  }
+
+  @override
+  String get stageFailed => 'The query could not run.';
 }
