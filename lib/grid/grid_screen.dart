@@ -130,6 +130,11 @@ class _GridScreenState extends ConsumerState<GridScreen> {
       if (gen != _generation || !mounted) return;
       setState(() {
         _loading = false;
+        // The shown rows belong to the old query: drop them so the full-screen Retry reloads page 1.
+        _rows.clear();
+        _missing = const [];
+        _footer = const {};
+        _lastPage = 1;
         _error = e is ApiError ? e : ApiError(-1, AppLocalizations.of(context).somethingWrong);
       });
     }
@@ -154,6 +159,7 @@ class _GridScreenState extends ConsumerState<GridScreen> {
         _footer = page.footer;
         _loadingMore = false;
       });
+      WidgetsBinding.instance.addPostFrameCallback((_) => _onScroll());
     } catch (e) {
       if (gen != _generation || !mounted) return;
       _q.page = next - 1;
@@ -492,14 +498,14 @@ class _GridScreenState extends ConsumerState<GridScreen> {
           ),
         );
 
+    if (_error != null && _rows.isEmpty) {
+      return scrollable(_Message(text: _error!.message, action: FilledButton(onPressed: _reload, child: Text(l.retry))));
+    }
     if (_missing.isNotEmpty) {
       return scrollable(_Message(
         text: l.filterFirst(_missing.map(_labelOf).join(', ')),
         action: FilledButton.tonal(onPressed: _openFilters, child: Text(l.filter)),
       ));
-    }
-    if (_error != null && _rows.isEmpty) {
-      return scrollable(_Message(text: _error!.message, action: FilledButton(onPressed: _reload, child: Text(l.retry))));
     }
     if (_rows.isEmpty) {
       return scrollable(_loading || !_started ? const SizedBox.shrink() : _Message(text: l.noResults));

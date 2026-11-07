@@ -285,6 +285,54 @@ void main() {
     expect(find.text(defaultUnreachableMessage), findsNothing);
   });
 
+  testWidgets('failed reload then Retry reloads page 1 and drops old rows', (tester) async {
+    var down = false;
+    final r = routes(data: (o) {
+      final page = int.parse(o.uri.queryParameters['page'] ?? '1');
+      final tag = o.uri.queryParameters['search'] == null ? 1 : 5;
+      return {
+        'data': [for (var i = 0; i < 20; i++) row(tag * 1000 + page * 100 + i)],
+        'current_page': page,
+        'last_page': 3,
+        'total': 60,
+      };
+    });
+    final ok = r['GET /api/metas/131/data']!;
+    r['GET /api/metas/131/data'] = (o) => down ? null : ok(o);
+    final a = await pumpGrid(tester, r);
+    expect(find.text('WO-1100'), findsOneWidget);
+    down = true;
+    await tester.enterText(find.byType(TextField).first, 'pump');
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    expect(find.text(defaultUnreachableMessage), findsOneWidget);
+    expect(find.text('WO-1100'), findsNothing);
+    down = false;
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+    final last = dataCalls(a).last.uri.queryParameters;
+    expect(last['page'], '1');
+    expect(last['search'], 'pump');
+    expect(find.text('WO-5100'), findsOneWidget);
+    expect(find.text('WO-1100'), findsNothing);
+  });
+
+  testWidgets('a short page 2 still loads page 3', (tester) async {
+    final a = await pumpGrid(tester, routes(data: (o) {
+      final page = int.parse(o.uri.queryParameters['page'] ?? '1');
+      return {
+        'data': [for (var i = 0; i < (page == 1 ? 20 : 1); i++) row(page * 100 + i)],
+        'current_page': page,
+        'last_page': 3,
+        'total': 22,
+      };
+    }));
+    final pos = tester.state<ScrollableState>(find.byType(Scrollable).last).position;
+    pos.jumpTo(pos.maxScrollExtent);
+    await tester.pumpAndSettle();
+    expect(dataCalls(a).map((o) => o.uri.queryParameters['page']), ['1', '2', '3']);
+  });
+
   testWidgets('footer aggregates show as one line', (tester) async {
     await pumpGrid(tester, routes(data: (o) => {
           'data': [row(7)],
