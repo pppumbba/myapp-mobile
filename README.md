@@ -38,3 +38,9 @@ colour; git-ignored, read by `android/app/build.gradle.kts`) and runs `flutter b
 flutter test
 flutter analyze
 ```
+
+## Cleartext and permissions
+
+The main manifest declares `INTERNET`, so release APKs reach the network. Plain `http://` is
+allowed in **debug** builds only (`android/app/src/debug/AndroidManifest.xml`); release builds are
+HTTPS-only, so use an `https://` `--api` with `--release`.
