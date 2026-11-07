@@ -152,6 +152,48 @@ abstract class AppLocalizations {
   /// **'Your account does not have access to this app\'s organization.'**
   String get noAccessToCustomer;
 
+  /// No description provided for @more.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get more;
+
+  /// No description provided for @account.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get account;
+
+  /// No description provided for @organization.
+  ///
+  /// In en, this message translates to:
+  /// **'Organization'**
+  String get organization;
+
+  /// No description provided for @openOnWebTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Open on the web'**
+  String get openOnWebTitle;
+
+  /// No description provided for @openOnWebBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This screen is not available in the app yet. Open it on the web.'**
+  String get openOnWebBody;
+
+  /// No description provided for @comingSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Coming soon'**
+  String get comingSoon;
+
+  /// No description provided for @noScreens.
+  ///
+  /// In en, this message translates to:
+  /// **'There is nothing to show in this app yet.'**
+  String get noScreens;
+
   /// No description provided for @welcome.
   ///
   /// In en, this message translates to:

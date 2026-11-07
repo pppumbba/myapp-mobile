@@ -39,6 +39,28 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your account does not have access to this app\'s organization.';
 
   @override
+  String get more => 'More';
+
+  @override
+  String get account => 'Account';
+
+  @override
+  String get organization => 'Organization';
+
+  @override
+  String get openOnWebTitle => 'Open on the web';
+
+  @override
+  String get openOnWebBody =>
+      'This screen is not available in the app yet. Open it on the web.';
+
+  @override
+  String get comingSoon => 'Coming soon';
+
+  @override
+  String get noScreens => 'There is nothing to show in this app yet.';
+
+  @override
   String welcome(String name) {
     return 'Signed in as $name';
   }

@@ -9,6 +9,13 @@
   "serverUnreachable": "The server could not be reached. Check your connection and try again.",
   "somethingWrong": "Something went wrong. Try again.",
   "noAccessToCustomer": "Your account does not have access to this app's organization.",
+  "more": "More",
+  "account": "Account",
+  "organization": "Organization",
+  "openOnWebTitle": "Open on the web",
+  "openOnWebBody": "This screen is not available in the app yet. Open it on the web.",
+  "comingSoon": "Coming soon",
+  "noScreens": "There is nothing to show in this app yet.",
   "welcome": "Signed in as {name}",
   "@welcome": {
     "placeholders": {

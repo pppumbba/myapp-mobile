@@ -6,31 +6,13 @@ import 'package:go_router/go_router.dart';
 import 'auth/session.dart';
 import 'auth/sign_in_page.dart';
 import 'l10n/app_localizations.dart';
+import 'nav/shell.dart';
 
-/// Placeholder for the signed-in shell; Task 4 replaces it.
-class HomePlaceholder extends ConsumerWidget {
-  const HomePlaceholder({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final s = ref.watch(sessionProvider);
-    final l = AppLocalizations.of(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(s.info?.name ?? ''),
-        actions: [
-          TextButton(onPressed: () => ref.read(sessionProvider.notifier).signOut(), child: Text(l.signOut)),
-        ],
-      ),
-      body: Center(child: Text(l.welcome('${s.user?['name'] ?? ''}'))),
-    );
-  }
-}
 
 String? sessionRedirect(SessionState s, String location) {
-  final target = s.info == null ? '/splash' : (s.signedIn ? '/home' : '/sign-in');
+  final target = s.info == null ? '/splash' : (s.signedIn ? landingLocation : '/sign-in');
   if (s.signedIn) {
-    return (location == '/splash' || location == '/sign-in') ? '/home' : null;
+    return (location == '/splash' || location == '/sign-in') ? landingLocation : null;
   }
   return location == target ? null : target;
 }
@@ -46,7 +28,25 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/splash', builder: (_, _) => const SplashPage()),
       GoRoute(path: '/sign-in', builder: (_, _) => const SignInPage()),
-      GoRoute(path: '/home', builder: (_, _) => const HomePlaceholder()),
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, shell) => AppShell(navigationShell: shell, routeState: state),
+        branches: [
+          for (var i = 0; i < maxTabBranches; i++)
+            StatefulShellBranch(routes: [GoRoute(path: '/t/$i', builder: (_, _) => TabRoot(i))]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: moreLocation,
+              builder: (_, _) => const MorePage(),
+              routes: [
+                GoRoute(
+                  path: 'screen/:id',
+                  builder: (_, state) => MoreScreenPage(int.parse(state.pathParameters['id']!)),
+                ),
+              ],
+            ),
+          ]),
+        ],
+      ),
     ],
   );
   ref.onDispose(router.dispose);

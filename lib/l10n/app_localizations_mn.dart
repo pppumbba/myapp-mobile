@@ -39,6 +39,28 @@ class AppLocalizationsMn extends AppLocalizations {
       'Таны бүртгэл энэ аппын байгууллагад эрхгүй байна.';
 
   @override
+  String get more => 'Бусад';
+
+  @override
+  String get account => 'Бүртгэл';
+
+  @override
+  String get organization => 'Байгууллага';
+
+  @override
+  String get openOnWebTitle => 'Вэбээр нээх';
+
+  @override
+  String get openOnWebBody =>
+      'Энэ дэлгэц аппад хараахан ороогүй байна. Вэбээр нээнэ үү.';
+
+  @override
+  String get comingSoon => 'Удахгүй';
+
+  @override
+  String get noScreens => 'Энэ аппад харуулах зүйл одоохондоо алга.';
+
+  @override
   String welcome(String name) {
     return '$name нэрээр нэвтэрсэн';
   }
