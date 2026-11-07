@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wand_mobile/api/models.dart';
 import 'package:wand_mobile/grid/card_slots.dart';
@@ -71,5 +72,33 @@ void main() {
     expect(statusColor('in repair', opts), statusColor('in repair', opts));
     expect(statusColor('in repair', opts), isNot(statusColor('idle', opts)));
     expect(statusColor('zzz', ['a']), statusColor('zzz', ['a']));
+  });
+
+  test('two params placed as title: first is title, second in body', () {
+    final s = cardSlots([p('a', 'A', pos: 'title'), p('b', 'B', pos: 'title'), p('c', 'C'), p('d', 'D')]);
+    expect(s.title?.paramName, 'a');
+    expect(s.body.map((e) => e.paramName), contains('b'));
+    expect(s.subtitle?.paramName, 'c');
+  });
+
+  test('placed body params beyond 3 are all kept', () {
+    final s = cardSlots([for (final n in ['a', 'b', 'c', 'd', 'e']) p(n, n, pos: 'body')]);
+    expect(s.body.map((e) => e.paramName), ['a', 'b', 'c', 'd', 'e']);
+  });
+
+  test('a second image claimant goes to body', () {
+    final s = cardSlots([p('a', 'A', pos: 'image'), p('b', 'B', pos: 'image')]);
+    expect(s.image?.paramName, 'a');
+    expect(s.body.map((e) => e.paramName), ['b']);
+  });
+
+  test('statusColor follows the web word map first', () {
+    final opts = ['completed', 'x'];
+    expect(statusColor('completed', opts), Colors.green.shade700);
+    expect(statusColor('Completed', opts), Colors.green.shade700);
+    expect(statusColor('pending', opts), Colors.amber.shade800);
+    expect(statusColor('rejected', opts), Colors.red.shade700);
+    final scheme = ColorScheme.fromSeed(seedColor: Colors.teal);
+    expect(statusColor('in progress', opts, scheme: scheme), scheme.primary);
   });
 }

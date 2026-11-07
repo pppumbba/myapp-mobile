@@ -30,6 +30,9 @@ class RecordCard extends StatelessWidget {
     final title = slots.title == null ? '' : text(slots.title!);
     final subtitle = slots.subtitle == null ? '' : text(slots.subtitle!);
     final badge = slots.badge == null ? '' : text(slots.badge!);
+    final imageValue = slots.image == null ? null : row[slots.image!.paramName];
+    // Uploaded-file images (JSON file values, /contents/{id}, need auth) are deferred to plan 5 (files); only URLs show now.
+    final imageUrl = imageValue is String && RegExp(r"^https?://", caseSensitive: false).hasMatch(imageValue) ? imageValue : null;
     final options = slots.badge == null ? const <String>[] : _options(slots.badge!);
 
     return Card(
@@ -43,6 +46,14 @@ class RecordCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (imageUrl != null)
+                Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(imageUrl, width: 48, height: 48, fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox(width: 48, height: 48)),
+                  ),
+                ),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

@@ -33,4 +33,20 @@ void main() {
     expect(tap, 1);
     expect(more, 2);
   });
+
+  testWidgets('RecordCard image slot renders for a URL and not for a file value', (tester) async {
+    final img = MetaParam(id: 1, paramName: 'pic', labelName: 'Pic');
+    final title = MetaParam(id: 2, paramName: 't', labelName: 'T');
+    Future<void> pump(Object? value) => tester.pumpWidget(MaterialApp(
+          localizationsDelegates: const [AppLocalizations.delegate, GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: RecordCard(slots: CardSlots(title: title, image: img), row: {'t': 'x', 'pic': value})),
+        ));
+    await pump('https://example.com/a.png');
+    expect(find.byType(Image), findsOneWidget);
+    await pump('[{"id":3,"name":"a.png"}]');
+    expect(find.byType(Image), findsNothing);
+    await pump([{'id': 3}]);
+    expect(find.byType(Image), findsNothing);
+  });
 }

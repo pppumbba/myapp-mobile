@@ -13,26 +13,28 @@ class CardSlots {
   CardSlots({this.title, this.subtitle, this.badge, this.image, this.body = const [], this.footer = const []});
 }
 
-/// Picks which params fill which card slot. Only shown, non-widget params take part;
-/// a slot named by `widget_position` wins over the automatic choice.
+/// Picks which params fill which card slot. Only shown, non-widget params take part.
+/// Pass 1 places params the builder put in a slot (`widget_position`); a second claimant of a
+/// single slot goes to body, and placed body/footer params are never capped.
+/// Pass 2 guesses the still-empty slots from the unplaced params (at most 3 guessed body fields).
 CardSlots cardSlots(List<MetaParam> gridParams) {
   final shown = [
     for (final p in gridParams)
       if (p.isShow && p.dataType != 'widget') p,
   ];
   final s = CardSlots(body: [], footer: []);
-  final taken = <MetaParam>{};
+  final placed = <MetaParam>{};
 
   for (final p in shown) {
     switch (p.widgetPosition) {
       case 'title':
-        s.title ??= p;
+        if (s.title == null) { s.title = p; } else { s.body.add(p); }
       case 'subtitle':
-        s.subtitle ??= p;
+        if (s.subtitle == null) { s.subtitle = p; } else { s.body.add(p); }
       case 'badge':
-        s.badge ??= p;
+        if (s.badge == null) { s.badge = p; } else { s.body.add(p); }
       case 'image':
-        s.image ??= p;
+        if (s.image == null) { s.image = p; } else { s.body.add(p); }
       case 'body':
         s.body.add(p);
       case 'footer':
@@ -40,49 +42,44 @@ CardSlots cardSlots(List<MetaParam> gridParams) {
       default:
         continue;
     }
-    taken.add(p);
+    placed.add(p);
   }
-  // A slot that was already filled by an earlier param leaves the later one unplaced.
-  taken.removeWhere((p) => s.title != p && s.subtitle != p && s.badge != p && s.image != p && !s.body.contains(p) && !s.footer.contains(p));
 
-  List<MetaParam> rest() => [
-        for (final p in shown)
-          if (!taken.contains(p) && p.widgetPosition != 'image') p,
-      ];
+  final rest = [for (final p in shown) if (!placed.contains(p)) p];
+  MetaParam? take(bool Function(MetaParam) test) {
+    final i = rest.indexWhere(test);
+    return i < 0 ? null : rest.removeAt(i);
+  }
 
-  if (s.title == null) {
-    final r = rest();
-    final t = r.where((p) => p.isLabel).firstOrNull ?? r.firstOrNull;
-    if (t != null) {
-      s.title = t;
-      taken.add(t);
-    }
-  }
-  if (s.subtitle == null) {
-    final t = rest().firstOrNull;
-    if (t != null) {
-      s.subtitle = t;
-      taken.add(t);
-    }
-  }
-  if (s.badge == null) {
-    final t = rest().where((p) => p.renderType == 'status').firstOrNull;
-    if (t != null) {
-      s.badge = t;
-      taken.add(t);
-    }
-  }
-  for (final p in rest()) {
-    if (s.body.length >= 3) break;
-    s.body.add(p);
-    taken.add(p);
-  }
+  s.title ??= take((p) => p.isLabel) ?? take((_) => true);
+  s.subtitle ??= take((_) => true);
+  s.badge ??= take((p) => p.renderType == 'status');
+  s.body.addAll(rest.take(3));
   return s;
 }
 
-/// A stable colour per option index, spread around the scheme's primary hue.
+const _web = {
+  'approved': 's', 'received': 's', 'done': 's', 'completed': 's',
+  'submitted': 'w', 'sent': 'w', 'pending': 'w', 'partially received': 'w', 'enrolled': 'w',
+  'ordered': 'b', 'in progress': 'b', 'published': 'b',
+  'rejected': 'e', 'cancelled': 'e', 'dropped': 'e', 'blocked': 'e',
+};
+
+/// The web's status words keep their colour; any other option gets a stable colour by its
+/// index, spread around the scheme's primary hue. Values that are not options are gray.
 Color statusColor(String value, List<String> options, {ColorScheme? scheme}) {
-  final i = options.indexWhere((o) => o.toLowerCase() == value.toLowerCase());
+  final key = value.toLowerCase();
+  switch (_web[key]) {
+    case 's':
+      return Colors.green.shade700;
+    case 'w':
+      return Colors.amber.shade800;
+    case 'b':
+      return scheme?.primary ?? const Color(0xFF4F46E5);
+    case 'e':
+      return Colors.red.shade700;
+  }
+  final i = options.indexWhere((o) => o.toLowerCase() == key);
   if (i < 0) return Colors.blueGrey;
   final base = HSLColor.fromColor(scheme?.primary ?? const Color(0xFF4F46E5)).hue;
   final hue = (base + i * 360 / (options.length < 2 ? 2 : options.length)) % 360;
