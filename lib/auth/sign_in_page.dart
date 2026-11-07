@@ -25,6 +25,13 @@ class SplashPage extends ConsumerWidget {
                       onPressed: () => ref.read(sessionProvider.notifier).start(),
                       child: Text(l.retry),
                     ),
+                    if (s.restoring) ...[
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: () => ref.read(sessionProvider.notifier).abandonRestore(),
+                        child: Text(l.signOut),
+                      ),
+                    ],
                   ],
                 ),
               )

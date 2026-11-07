@@ -147,7 +147,13 @@ class SessionController extends Notifier<SessionState> {
   /// a restore that fails otherwise (offline, 5xx) keeps the token and stays on the splash with
   /// Retry, which calls [start] again.
   Future<void> start() async {
-    final saved = await _storage.read();
+    String? saved;
+    try {
+      saved = await _storage.read();
+    } catch (_) {
+      // A keystore that cannot be read (e.g. restored from another device): start signed out.
+      saved = null;
+    }
     final hasToken = saved != null && saved.isNotEmpty;
     state = SessionState(loading: true, info: state.info, restoring: hasToken);
     try {
@@ -244,6 +250,12 @@ class SessionController extends Notifier<SessionState> {
     } catch (_) {
       state = state.copyWith(loading: false, error: deviceStrings().somethingWrong);
     }
+  }
+
+  /// Gives up on a saved token that keeps failing to restore, and loads the sign-in page.
+  Future<void> abandonRestore() async {
+    await signOut();
+    await start();
   }
 
   Future<void> signOut() async {

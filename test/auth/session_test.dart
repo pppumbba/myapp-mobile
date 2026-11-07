@@ -32,6 +32,15 @@ class FakeAdapter implements HttpClientAdapter {
   void close({bool force = false}) {}
 }
 
+class ThrowingStorage implements TokenStorage {
+  @override
+  Future<String?> read() async => throw Exception("keystore");
+  @override
+  Future<void> write(String token) async {}
+  @override
+  Future<void> clear() async {}
+}
+
 class MemoryStorage implements TokenStorage {
   String? value;
   MemoryStorage([this.value]);
@@ -322,5 +331,54 @@ void restoreTests() {
     }
     expect(c.read(sessionProvider).signedIn, true);
     expect(sessionRedirect(c.read(sessionProvider), '/splash'), '/t/0');
+  });
+  testWidgets("a restore that keeps failing offers Sign out, which leads to sign-in", (tester) async {
+    final adapter = FlakyAdapter({"GET /api/mobile/5": mobile, "POST /api/logout": (200, <String, dynamic>{}), ...userRoutes});
+    final config = AppConfig(appMetaId: 5, apiBase: "https://h/api");
+    final client = ApiClient(config, dio: Dio()..httpClientAdapter = adapter);
+    final storage = MemoryStorage("SAVED");
+    final c = ProviderContainer(overrides: [
+      appConfigProvider.overrideWithValue(config),
+      apiClientProvider.overrideWithValue(client),
+      tokenStorageProvider.overrideWithValue(storage),
+    ]);
+    addTearDown(c.dispose);
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: c,
+      child: const MaterialApp(
+        localizationsDelegates: [AppLocalizations.delegate, GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: SplashPage(),
+      ),
+    ));
+    await tester.runAsync(() => c.read(sessionProvider.notifier).start());
+    await tester.pumpAndSettle();
+    expect(find.text("Sign out"), findsOneWidget);
+    await tester.runAsync(() async {
+      await tester.tap(find.text("Sign out"));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    });
+    // Signed out, the splash spins until the router moves on: pump instead of settling.
+    await tester.pump(const Duration(milliseconds: 20));
+    final s = c.read(sessionProvider);
+    expect(storage.value, isNull);
+    expect(client.token, isNull);
+    expect(s.info, isNotNull);
+    expect(sessionRedirect(s, "/splash"), "/sign-in");
+  });
+
+  test("start survives a token storage that throws", () async {
+    final t = setup(userRoutes);
+    final c = ProviderContainer(overrides: [
+      appConfigProvider.overrideWithValue(t.c.read(appConfigProvider)),
+      apiClientProvider.overrideWithValue(t.c.read(apiClientProvider)),
+      tokenStorageProvider.overrideWithValue(ThrowingStorage()),
+    ]);
+    addTearDown(c.dispose);
+    await c.read(sessionProvider.notifier).start();
+    final s = c.read(sessionProvider);
+    expect(s.loading, false);
+    expect(s.info, isNotNull);
+    expect(sessionRedirect(s, "/splash"), "/sign-in");
   });
 }
