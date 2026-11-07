@@ -32,6 +32,9 @@ class AppLocalizationsMn extends AppLocalizations {
       'Сервертэй холбогдож чадсангүй. Холболтоо шалгаад дахин оролдоно уу.';
 
   @override
+  String get somethingWrong => 'Алдаа гарлаа. Дахин оролдоно уу.';
+
+  @override
   String get noAccessToCustomer =>
       'Таны бүртгэл энэ аппын байгууллагад эрхгүй байна.';
 

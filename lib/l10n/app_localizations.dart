@@ -140,6 +140,12 @@ abstract class AppLocalizations {
   /// **'The server could not be reached. Check your connection and try again.'**
   String get serverUnreachable;
 
+  /// No description provided for @somethingWrong.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Try again.'**
+  String get somethingWrong;
+
   /// No description provided for @noAccessToCustomer.
   ///
   /// In en, this message translates to:

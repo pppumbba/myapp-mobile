@@ -194,4 +194,57 @@ void main() {
     expect(t.s.value, isNull);
     expect(t.c.read(sessionProvider).user, isNull);
   });
+
+  test('signIn with a non-ApiError failure clears loading and shows the generic error', () async {
+    final t = setup({
+      'POST /api/login': (200, {'user': {}, 'token': 5, 'customers': []}),
+    });
+    final ctl = t.c.read(sessionProvider.notifier);
+    await ctl.start();
+    await ctl.signIn('b@x.mn', 'pw');
+    final s = t.c.read(sessionProvider);
+    expect(s.loading, false);
+    expect(s.error, isNotNull);
+    expect(t.client.token, isNull);
+    expect(t.s.value, isNull);
+  });
+
+  test("signIn rejects a single customer whose code differs from the app's", () async {
+    final t = setup({
+      'POST /api/login': (200, {
+        'user': {'id': 1},
+        'token': 'WRONG',
+        'customers': [
+          {'id': 3, 'code': 'other', 'name': 'O', 'is_admin': false},
+        ],
+      }),
+      'POST /api/logout': (200, {'message': 'ok'}),
+      ...userRoutes,
+    });
+    final ctl = t.c.read(sessionProvider.notifier);
+    await ctl.start();
+    await ctl.signIn('b@x.mn', 'pw');
+    final s = t.c.read(sessionProvider);
+    expect(s.error, isNotNull);
+    expect(s.user, isNull);
+    expect(t.s.value, isNull);
+    expect(t.client.token, isNull);
+    final out = t.a.seen.where((r) => r.uri.path == '/api/logout');
+    expect(out.length, 1);
+    expect(out.first.headers['Authorization'], 'Bearer WRONG');
+  });
+
+  test('loadUser while signed in keeps the user during loading', () async {
+    final t = setup(userRoutes, token: 'SAVED');
+    final ctl = t.c.read(sessionProvider.notifier);
+    await ctl.start();
+    final seen = <bool>[];
+    t.c.listen(sessionProvider, (_, n) {
+      if (n.loading) seen.add(n.signedIn);
+    });
+    await ctl.loadUser();
+    expect(seen, isNotEmpty);
+    expect(seen.every((x) => x), true);
+    expect(t.c.read(sessionProvider).signedIn, true);
+  });
 }

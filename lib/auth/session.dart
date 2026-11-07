@@ -32,7 +32,11 @@ class SecureTokenStorage implements TokenStorage {
   }
 
   @override
-  Future<void> write(String token) => _s.write(key: key, value: token);
+  Future<void> write(String token) async {
+    try {
+      await _s.write(key: key, value: token);
+    } catch (_) {}
+  }
 
   @override
   Future<void> clear() async {
@@ -100,6 +104,15 @@ class SessionState {
   });
 
   bool get signedIn => user != null;
+
+  SessionState copyWith({bool? loading, String? error, bool clearError = false}) => SessionState(
+        info: info,
+        user: user,
+        access: access,
+        sessionValues: sessionValues,
+        loading: loading ?? this.loading,
+        error: clearError ? null : (error ?? this.error),
+      );
 }
 
 class SessionController extends Notifier<SessionState> {
@@ -139,6 +152,9 @@ class SessionController extends Notifier<SessionState> {
       }
     } on ApiError catch (e) {
       state = SessionState(error: e.message);
+    } catch (_) {
+      _client.token = null;
+      state = SessionState(info: state.info, error: deviceStrings().somethingWrong);
     }
   }
 
@@ -149,8 +165,18 @@ class SessionController extends Notifier<SessionState> {
       final j = await _client.post<Map<String, dynamic>>('/login', {'email': email, 'password': password});
       var token = j['token'] as String;
       final customers = (j['customers'] as List? ?? const []).whereType<Map>().toList();
+      final code = ref.read(appConfigProvider).customerCode ?? info?.customerCode;
+      if (customers.length == 1 && code != null && customers.first['code'] != code) {
+        // Another organization's token: not this app's tenant. Drop it.
+        _client.token = token;
+        try {
+          await _client.post<dynamic>('/logout', null);
+        } catch (_) {}
+        _client.token = null;
+        state = SessionState(info: info, error: deviceStrings().noAccessToCustomer);
+        return;
+      }
       if (customers.length != 1) {
-        final code = ref.read(appConfigProvider).customerCode ?? info?.customerCode;
         final match = customers.where((c) => c['code'] == code).firstOrNull;
         if (match == null) {
           // The token from /login is not bound to any customer, so it is not kept.
@@ -172,12 +198,15 @@ class SessionController extends Notifier<SessionState> {
     } on ApiError catch (e) {
       _client.token = null;
       state = SessionState(info: info, error: e.message);
+    } catch (_) {
+      _client.token = null;
+      state = SessionState(info: info, error: deviceStrings().somethingWrong);
     }
   }
 
   Future<void> loadUser() async {
     final info = state.info;
-    state = SessionState(loading: true, info: info);
+    state = state.copyWith(loading: true, clearError: true);
     try {
       final r = await Future.wait<dynamic>([
         _client.get<dynamic>('/user'),
@@ -200,8 +229,10 @@ class SessionController extends Notifier<SessionState> {
         await _storage.clear();
         state = SessionState(info: info);
       } else {
-        state = SessionState(info: info, error: e.message);
+        state = state.copyWith(loading: false, error: e.message);
       }
+    } catch (_) {
+      state = state.copyWith(loading: false, error: deviceStrings().somethingWrong);
     }
   }
 

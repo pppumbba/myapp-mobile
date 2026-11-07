@@ -32,6 +32,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'The server could not be reached. Check your connection and try again.';
 
   @override
+  String get somethingWrong => 'Something went wrong. Try again.';
+
+  @override
   String get noAccessToCustomer =>
       'Your account does not have access to this app\'s organization.';
 
