@@ -82,4 +82,42 @@ class AppLocalizationsMn extends AppLocalizations {
 
   @override
   String get noResults => 'Илэрц олдсонгүй';
+
+  @override
+  String get save => 'Хадгалах';
+
+  @override
+  String get saveAndAdd => 'Хадгалаад шинийг нэмэх';
+
+  @override
+  String get next => 'Дараах';
+
+  @override
+  String get back => 'Өмнөх';
+
+  @override
+  String get general => 'Ерөнхий';
+
+  @override
+  String get saved => 'Хадгаллаа';
+
+  @override
+  String get fillRequired => 'Заавал бөглөх талбаруудыг бөглөнө үү.';
+
+  @override
+  String get fillBeforeNext => 'Үргэлжлүүлэхийн өмнө үүнийг бөглөнө үү.';
+
+  @override
+  String get autonumberNext => 'Хадгалах үед олгоно: энэ бол дараагийн дугаар.';
+
+  @override
+  String get autonumberExisting => 'Нэмэх үед дугаарласан.';
+
+  @override
+  String get clear => 'Арилгах';
+
+  @override
+  String stepOf(int step, int total) {
+    return '$total алхмын $step-р алхам';
+  }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/client.dart';
 import '../api/models.dart';
+import '../form/form_screen.dart';
 import '../l10n/app_localizations.dart';
 import '../meta/defs.dart';
 import 'open_on_web.dart';
@@ -32,13 +33,13 @@ class ScreenView extends ConsumerWidget {
   }
 }
 
-/// The single switch on `meta.type`: Task 7 fills in the grid, Task 8 the form.
+/// The single switch on `meta.type`: Task 7 fills in the grid; a form opens as a new record.
 Widget screenFor(Meta meta, {Map<String, String> fixed = const {}, Map<String, String> filters = const {}}) {
   switch (meta.type) {
     case 'datagrid':
       return _ComingSoon(meta); // GridScreen (Task 7)
     case 'form':
-      return _ComingSoon(meta); // FormScreen (Task 8)
+      return FormScreen(key: ValueKey(meta.id), formMetaId: meta.id, fixed: fixed);
     default:
       return OpenOnWeb(meta);
   }

@@ -82,4 +82,42 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noResults => 'No results';
+
+  @override
+  String get save => 'Save';
+
+  @override
+  String get saveAndAdd => 'Save and add';
+
+  @override
+  String get next => 'Next';
+
+  @override
+  String get back => 'Back';
+
+  @override
+  String get general => 'General';
+
+  @override
+  String get saved => 'Saved';
+
+  @override
+  String get fillRequired => 'Fill in the required fields.';
+
+  @override
+  String get fillBeforeNext => 'Fill this in before going on.';
+
+  @override
+  String get autonumberNext => 'Given when saved: this is the next number.';
+
+  @override
+  String get autonumberExisting => 'Numbered when it was added.';
+
+  @override
+  String get clear => 'Clear';
+
+  @override
+  String stepOf(int step, int total) {
+    return 'Step $step of $total';
+  }
 }

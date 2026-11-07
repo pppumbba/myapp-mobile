@@ -28,5 +28,23 @@
   }
 ,
   "search": "Search",
-  "noResults": "No results"
+  "noResults": "No results",
+  "save": "Save",
+  "saveAndAdd": "Save and add",
+  "next": "Next",
+  "back": "Back",
+  "general": "General",
+  "saved": "Saved",
+  "fillRequired": "Fill in the required fields.",
+  "fillBeforeNext": "Fill this in before going on.",
+  "autonumberNext": "Given when saved: this is the next number.",
+  "autonumberExisting": "Numbered when it was added.",
+  "clear": "Clear",
+  "stepOf": "Step {step} of {total}",
+  "@stepOf": {
+    "placeholders": {
+      "step": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  }
 }

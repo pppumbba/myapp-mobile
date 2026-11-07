@@ -235,6 +235,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No results'**
   String get noResults;
+
+  /// No description provided for @save.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get save;
+
+  /// No description provided for @saveAndAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Save and add'**
+  String get saveAndAdd;
+
+  /// No description provided for @next.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get next;
+
+  /// No description provided for @back.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get back;
+
+  /// No description provided for @general.
+  ///
+  /// In en, this message translates to:
+  /// **'General'**
+  String get general;
+
+  /// No description provided for @saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get saved;
+
+  /// No description provided for @fillRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill in the required fields.'**
+  String get fillRequired;
+
+  /// No description provided for @fillBeforeNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill this in before going on.'**
+  String get fillBeforeNext;
+
+  /// No description provided for @autonumberNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Given when saved: this is the next number.'**
+  String get autonumberNext;
+
+  /// No description provided for @autonumberExisting.
+  ///
+  /// In en, this message translates to:
+  /// **'Numbered when it was added.'**
+  String get autonumberExisting;
+
+  /// No description provided for @clear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get clear;
+
+  /// No description provided for @stepOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {step} of {total}'**
+  String stepOf(int step, int total);
 }
 
 class _AppLocalizationsDelegate
