@@ -27,7 +27,10 @@ MobileMenu flattenMenu(
 }) {
   final screens = <MenuEntry>[];
   void walk(List<MetaParam> items, String? group) {
-    final sorted = [...items]..sort((a, b) => a.orderNumber.compareTo(b.orderNumber));
+    final sorted = [...items]..sort((a, b) {
+        final c = a.orderNumber.compareTo(b.orderNumber);
+        return c != 0 ? c : a.id.compareTo(b.id);
+      });
     for (final p in sorted) {
       if (!p.isShow) continue;
       final ref = p.refMetaId;

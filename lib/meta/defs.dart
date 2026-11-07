@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../api/client.dart';
 import '../api/models.dart';
 import '../auth/session.dart';
 
@@ -37,11 +38,13 @@ final actionsProvider = FutureProvider.family<List<MetaAction>, int>(retry: noRe
 });
 
 /// The type code of a meta (`datagrid`, `form`, ...), or null when it cannot be loaded.
-final metaTypeProvider = FutureProvider.family<String?, int>((ref, id) async {
+/// Only 403/404 (gone or not allowed) count as "no type"; other failures are rethrown so they are not cached as null.
+final metaTypeProvider = FutureProvider.family<String?, int>(retry: noRetry, (ref, id) async {
   try {
     return (await ref.watch(metaDefProvider(id).future)).meta.type;
-  } catch (_) {
-    return null;
+  } on ApiError catch (e) {
+    if (e.status == 403 || e.status == 404) return null;
+    rethrow;
   }
 });
 

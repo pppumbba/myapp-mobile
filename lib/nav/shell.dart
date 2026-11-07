@@ -117,7 +117,8 @@ class AppShell extends ConsumerWidget {
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: () {
-                  ref.invalidate(metaDefProvider(ref.read(appConfigProvider).appMetaId));
+                  ref.invalidate(metaDefProvider);
+                  ref.invalidate(metaTypeProvider);
                   ref.invalidate(mobileMenuProvider);
                 },
                 child: Text(l.retry),
@@ -136,7 +137,15 @@ class AppShell extends ConsumerWidget {
         final branch = navigationShell.currentIndex;
         final onMore = branch == moreBranchIndex;
         final hasMore = m.more.isNotEmpty;
-        final selected = onMore ? m.tabs.length : branch.clamp(0, m.tabs.length - 1);
+        final destinationCount = m.tabs.length + (hasMore ? 1 : 0);
+        // The menu can shrink under the user (access change): leave a branch that no longer exists.
+        final branchExists = onMore ? hasMore : branch < m.tabs.length;
+        if (!branchExists) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (context.mounted) navigationShell.goBranch(0);
+          });
+        }
+        final selected = !branchExists ? 0 : (onMore ? m.tabs.length : branch).clamp(0, destinationCount - 1);
 
         // The title follows the screen: tab label, "More", or the screen opened from More.
         var title = appName;
@@ -161,8 +170,9 @@ class AppShell extends ConsumerWidget {
             title: Text(title),
             actions: [account],
           ),
-          body: navigationShell,
-          bottomNavigationBar: NavigationBar(
+          body: branchExists ? navigationShell : const SizedBox.shrink(),
+          // NavigationBar needs at least two destinations; one screen is shown on its own.
+          bottomNavigationBar: destinationCount < 2 ? null : NavigationBar(
             selectedIndex: selected,
             onDestinationSelected: (i) {
               if (i < m.tabs.length) {
