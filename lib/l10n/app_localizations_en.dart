@@ -76,4 +76,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String welcome(String name) {
     return 'Signed in as $name';
   }
+
+  @override
+  String get search => 'Search';
+
+  @override
+  String get noResults => 'No results';
 }

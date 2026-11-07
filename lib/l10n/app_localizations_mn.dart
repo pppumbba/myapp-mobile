@@ -76,4 +76,10 @@ class AppLocalizationsMn extends AppLocalizations {
   String welcome(String name) {
     return '$name нэрээр нэвтэрсэн';
   }
+
+  @override
+  String get search => 'Хайх';
+
+  @override
+  String get noResults => 'Илэрц олдсонгүй';
 }
