@@ -74,4 +74,14 @@ void main() {
     expect(Access.fromJson({'is_admin': true, 'metas': []}).can(9, 'edit'), true);
     expect(Access.fromJson({'is_admin': false, 'metas': []}).can(9, 'edit'), false);
   });
+
+  test('MetaParam parses is_select and display_as', () {
+    final a = MetaParam.fromJson({'id': 1, 'param_name': 'c', 'is_select': 1, 'display_as': 'name'});
+    expect(a.isSelect, true);
+    expect(a.displayAs, 'name');
+    final b = MetaParam.fromJson({'id': 2, 'param_name': 'c', 'is_select': false});
+    expect(b.isSelect, false);
+    expect(b.displayAs, isNull);
+    expect(MetaParam.fromJson({'id': 3, 'param_name': 'c'}).isSelect, false);
+  });
 }

@@ -42,6 +42,18 @@ class AppLocalizationsMn extends AppLocalizations {
   String get more => 'Бусад';
 
   @override
+  String get yes => 'Тийм';
+
+  @override
+  String get no => 'Үгүй';
+
+  @override
+  String get active => 'Идэвхтэй';
+
+  @override
+  String get inactive => 'Идэвхгүй';
+
+  @override
   String get account => 'Бүртгэл';
 
   @override

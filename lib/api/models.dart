@@ -59,6 +59,8 @@ class MetaParam {
   final bool isRequired;
   final bool isCriteria;
   final bool isLabel;
+  final bool isSelect;
+  final String? displayAs;
   final bool isPrimary;
   final String? widgetPosition;
   final String? displayField;
@@ -83,6 +85,8 @@ class MetaParam {
     this.isRequired = false,
     this.isCriteria = false,
     this.isLabel = false,
+    this.isSelect = false,
+    this.displayAs,
     this.isPrimary = false,
     this.widgetPosition,
     this.displayField,
@@ -110,6 +114,8 @@ class MetaParam {
         isRequired: _bool(j['is_required']),
         isCriteria: _bool(j['is_criteria']),
         isLabel: _bool(j['is_label']),
+        isSelect: _bool(j['is_select']),
+        displayAs: j['display_as'] as String?,
         isPrimary: _bool(j['is_primary']),
         widgetPosition: j['widget_position'] as String?,
         displayField: j['display_field'] as String?,
