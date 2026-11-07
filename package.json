@@ -1,0 +1,26 @@
+{
+  "name": "myapp-mobile",
+  "private": true,
+  "type": "module",
+  "description": "Android shell for Wand app metas: builds the frontend's mobile.html for one app meta and wraps it with Capacitor.",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "open": "cap open android",
+    "apk": "cd android && gradlew assembleDebug"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.6.0",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/browser": "8.0.5",
+    "@capacitor/core": "8.6.0",
+    "@capacitor/splash-screen": "8.0.2",
+    "@capacitor/status-bar": "8.0.4"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.0",
+    "typescript": "5.9.3"
+  }
+}

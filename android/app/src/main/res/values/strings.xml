@@ -1,0 +1,4 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!-- app_name, package_name etc. come from app.json, see app/build.gradle -->
+<resources>
+</resources>
