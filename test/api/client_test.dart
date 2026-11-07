@@ -102,4 +102,23 @@ void main() {
     expect(a.seen[0].uri.path, '/api/c/acme/mobile/160');
     expect(a.seen[1].uri.path, '/api/metas/160');
   });
+
+  test('ApiClient notifies write listeners after a successful POST and not after a failed one', () async {
+    var fail = false;
+    final c = make(FakeAdapter((o) async => fail ? jsonBody(422, {'message': 'bad'}) : jsonBody(200, {'ok': true})));
+    var n = 0;
+    void l() => n++;
+    c.addWriteListener(l);
+    await c.post<dynamic>('/x', {});
+    expect(n, 1);
+    await c.get<dynamic>('/x');
+    expect(n, 1);
+    fail = true;
+    await expectLater(c.post<dynamic>('/x', {}), throwsA(isA<ApiError>()));
+    expect(n, 1);
+    c.removeWriteListener(l);
+    fail = false;
+    await c.put<dynamic>('/x', {});
+    expect(n, 1);
+  });
 }

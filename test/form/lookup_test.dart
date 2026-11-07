@@ -15,6 +15,7 @@ import 'package:wand_mobile/form/lookup_page.dart';
 import 'package:wand_mobile/l10n/app_localizations.dart';
 
 typedef Handler = (int, Object) Function(Uri uri);
+Duration Function(Uri uri)? delayFor;
 
 class RouteAdapter implements HttpClientAdapter {
   final Map<String, Handler> routes;
@@ -23,6 +24,8 @@ class RouteAdapter implements HttpClientAdapter {
   @override
   Future<ResponseBody> fetch(RequestOptions o, Stream<Uint8List>? s, Future<void>? c) async {
     seen.add(o.uri);
+    final d = delayFor?.call(o.uri);
+    if (d != null) await Future<void>.delayed(d);
     final (status, body) = routes[o.uri.path]?.call(o.uri) ?? (404, {'message': 'nope'});
     return ResponseBody.fromString(jsonEncode(body), status, headers: {
       Headers.contentTypeHeader: ['application/json'],
@@ -56,6 +59,7 @@ MetaParam lp({String? valueField, String? displayField, String? displayAs, Map<S
 const spec = LookupSpec(gridMetaId: 7, valueField: 'id', displayField: 'name');
 
 void main() {
+  setUp(() => delayFor = null);
   test('lookupSpecOf uses value_field/display_field and defaults', () {
     final a = lookupSpecOf(lp(valueField: 'code', displayField: 'name'))!;
     expect((a.gridMetaId, a.valueField, a.displayField), (7, 'code', 'name'));
@@ -144,5 +148,101 @@ void main() {
     await tester.tap(find.text('Bolt'));
     await tester.pumpAndSettle();
     expect(picked, {'id': 2, 'name': 'Bolt'});
+  });
+
+  test('a write clears the lookup cache', () async {
+    var found = false;
+    final (c, a) = setup({
+      '/api/metas/7/data': (_) => (200, page(found ? [{'id': 3, 'name': 'New'}] : [])),
+      '/api/x': (_) => (200, {}),
+    });
+    final s = c.read(lookupServiceProvider);
+    expect(await s.lookupText(spec, 3), isNull);
+    found = true;
+    await c.read(apiClientProvider).post<dynamic>('/x', {});
+    expect(await s.lookupText(spec, 3), 'New');
+    expect(a.seen.where((u) => u.path == '/api/metas/7/data').length, 3);
+  });
+
+  Map<String, Handler> gridRoutes(Handler data) => {
+        '/api/metas/7': (_) => (200, {'id': 7, 'type': 'datagrid'}),
+        '/api/metas/7/params': (_) => (200, [
+              {'id': 1, 'param_name': 'name', 'label_name': 'Name', 'is_label': true, 'order_number': 1},
+            ]),
+        '/api/metas/7/data': data,
+      };
+
+  Future<void> open(WidgetTester tester, ProviderContainer c, {Map<String, String> filters = const {}}) async {
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: c,
+      child: MaterialApp(
+        localizationsDelegates: const [AppLocalizations.delegate, GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(builder: (ctx) => TextButton(onPressed: () => pickLookup(ctx, spec, filters: filters), child: const Text('open'))),
+      ),
+    ));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('pickLookup sends filter[k]=v', (tester) async {
+    final (c, a) = setup(gridRoutes((_) => (200, page([{'id': 1, 'name': 'Acme'}]))));
+    await open(tester, c, filters: {'status': 'open'});
+    final q = a.seen.lastWhere((u) => u.path == '/api/metas/7/data').queryParameters;
+    expect(q['filter[status]'], 'open');
+    expect(q['page'], '1');
+  });
+
+  testWidgets('pickLookup first load sends no filter or search keys', (tester) async {
+    final (c, a) = setup(gridRoutes((_) => (200, page([{'id': 1, 'name': 'Acme'}]))));
+    await open(tester, c);
+    final q = a.seen.lastWhere((u) => u.path == '/api/metas/7/data').queryParameters;
+    expect(q.keys.any((k) => k.startsWith('filter')), isFalse);
+    expect(q.containsKey('search'), isFalse);
+  });
+
+  testWidgets('pickLookup pages until last_page', (tester) async {
+    final (c, a) = setup(gridRoutes((u) {
+      final pg = int.parse(u.queryParameters['page'] ?? '1');
+      return (200, page([for (var i = 0; i < 20; i++) {'id': pg * 100 + i, 'name': 'R$pg-$i'}], cur: pg, last: 2));
+    }));
+    await open(tester, c);
+    List<String?> pages() => a.seen.where((u) => u.path == '/api/metas/7/data').map((u) => u.queryParameters['page']).toList();
+    expect(pages(), ['1']);
+    await tester.drag(find.byType(ListView), const Offset(0, -3000));
+    await tester.pumpAndSettle();
+    expect(pages(), ['1', '2']);
+    await tester.drag(find.byType(ListView), const Offset(0, -6000));
+    await tester.pumpAndSettle();
+    expect(pages(), ['1', '2']);
+  });
+
+  testWidgets('pickLookup ignores a stale search response', (tester) async {
+    delayFor = (u) => u.queryParameters['search'] == 'a' ? const Duration(seconds: 2) : Duration.zero;
+    final (c, _) = setup(gridRoutes((u) {
+      final s = u.queryParameters['search'];
+      return (200, page([{'id': 1, 'name': s == 'a' ? 'StaleRow' : s == 'ab' ? 'FreshRow' : 'Initial'}]));
+    }));
+    await open(tester, c);
+    await tester.enterText(find.byType(TextField), 'a');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.enterText(find.byType(TextField), 'ab');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+    expect(find.text('FreshRow'), findsOneWidget);
+    expect(find.text('StaleRow'), findsNothing);
+  });
+
+  testWidgets('pickLookup shows error with Retry and recovers', (tester) async {
+    var ok = false;
+    final (c, _) = setup(gridRoutes((_) => ok ? (200, page([{'id': 1, 'name': 'Acme'}])) : (500, {'message': 'boom'})));
+    await open(tester, c);
+    expect(find.text('boom'), findsOneWidget);
+    ok = true;
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+    expect(find.text('Acme'), findsOneWidget);
+    expect(find.text('boom'), findsNothing);
   });
 }

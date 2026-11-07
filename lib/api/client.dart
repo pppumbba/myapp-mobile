@@ -41,6 +41,11 @@ class ApiClient {
   String? locale;
   void Function()? onUnauthorized;
   bool _firedForToken = false;
+  final List<void Function()> _writeListeners = [];
+
+  /// Called after every successful POST/PUT/DELETE (the web's onDataWrite).
+  void addWriteListener(void Function() l) => _writeListeners.add(l);
+  void removeWriteListener(void Function() l) => _writeListeners.remove(l);
 
   ApiClient(this.config, {Dio? dio, this.unreachableMessage = defaultUnreachableMessage})
       : dio = dio ?? Dio() {
@@ -71,6 +76,11 @@ class ApiClient {
         queryParameters: query == null ? null : encodeQuery(query),
         options: _options()..method = method,
       );
+      if (method != 'GET') {
+        for (final l in List.of(_writeListeners)) {
+          l();
+        }
+      }
       return res.data as T;
     } on DioException catch (e) {
       throw _toError(e);

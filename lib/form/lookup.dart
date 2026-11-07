@@ -124,5 +124,9 @@ class LookupService {
 
 final lookupServiceProvider = Provider<LookupService>((ref) {
   ref.watch(sessionProvider.select((s) => s.user?['id']));
-  return LookupService(ref.read(apiClientProvider));
+  final client = ref.read(apiClientProvider);
+  final service = LookupService(client);
+  client.addWriteListener(service.clear);
+  ref.onDispose(() => client.removeWriteListener(service.clear));
+  return service;
 });

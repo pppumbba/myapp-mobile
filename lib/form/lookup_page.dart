@@ -39,7 +39,7 @@ class _LookupPageState extends ConsumerState<LookupPage> {
   void initState() {
     super.initState();
     _scroll.addListener(() {
-      if (_scroll.position.extentAfter < 300) _load();
+      if (_error == null && _scroll.position.extentAfter < 300) _load();
     });
     _load();
   }
