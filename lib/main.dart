@@ -1,19 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'config.dart';
+import 'app.dart';
 
 void main() {
-  runApp(const WandApp());
-}
-
-class WandApp extends StatelessWidget {
-  const WandApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final config = AppConfig.fromEnvironment();
-    return MaterialApp(
-      home: Scaffold(body: Center(child: Text('App ${config.appMetaId}'))),
-    );
-  }
+  runApp(const ProviderScope(child: WandApp()));
 }
