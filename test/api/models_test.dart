@@ -27,6 +27,12 @@ void main() {
     expect(p.children.single.isShow, false);
   });
 
+  test('Meta type comes as the API object {id, code, name}', () {
+    final m = Meta.fromJson({'id': 160, 'type': {'id': 1, 'code': 'app', 'name': 'App'}, 'ref_meta': {'id': 2}});
+    expect(m.type, 'app');
+    expect(Meta.fromJson({'id': 1, 'type': 'datagrid'}).type, 'datagrid');
+  });
+
   test('Meta, action and page parse', () {
     final m = Meta.fromJson({'id': 3, 'type': null, 'json_config': null, 'load_expression_string': 'x'});
     expect(m.type, isNull);

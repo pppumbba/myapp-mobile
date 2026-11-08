@@ -36,7 +36,8 @@ class Meta {
         id: _int(j['id'])!,
         code: j['code'] as String?,
         name: j['name'] as String?,
-        type: j['type'] as String?,
+        // The API sends the meta type as an object {id, code, name}; a plain code is accepted too.
+        type: j['type'] is Map ? (j['type'] as Map)['code'] as String? : j['type'] as String?,
         jsonConfig: _map(j['json_config']),
         refMetaId: _int(j['ref_meta_id']),
         tableName: j['table_name'] as String?,
