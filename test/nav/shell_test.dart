@@ -151,6 +151,33 @@ void main() {
 }
 
 void pushedPageTests() {
+  testWidgets('system back on another tab goes to the first tab; a More screen goes back to More', (tester) async {
+    await pumpShell(
+      tester,
+      MobileMenu([entry(1, 'Orders'), entry(2, 'Items')], [entry(4, 'Reports', 'Finance')]),
+    );
+    await tester.tap(inBar('Items'));
+    await tester.pumpAndSettle();
+    expect(find.text('M2'), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('M1'), findsOneWidget);
+    expect(tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex, 0);
+
+    await tester.tap(inBar('More'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Reports'));
+    await tester.pumpAndSettle();
+    expect(find.text('M4'), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('Finance'), findsOneWidget, reason: 'back from a More screen shows the More list');
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('M1'), findsOneWidget);
+  });
+
+
   testWidgets('a form opened from a tab covers the shell: no NavigationBar, one app bar', (tester) async {
     await pumpShell(
       tester,

@@ -163,7 +163,14 @@ class AppShell extends ConsumerWidget {
           title = m.tabs[branch].label;
         }
 
-        return Scaffold(
+        // System back on another tab (or the More list) goes to the first tab; only the first tab exits.
+        final onFirst = selected == 0 || destinationCount < 2;
+        return PopScope(
+          canPop: onFirst,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) navigationShell.goBranch(0);
+          },
+          child: Scaffold(
           appBar: AppBar(
             leading: inMoreScreen
                 ? BackButton(onPressed: () => context.go(moreLocation))
@@ -187,6 +194,7 @@ class AppShell extends ConsumerWidget {
                 NavigationDestination(icon: Icon(menuIcon(t.item.iconCls)), label: t.label),
               if (hasMore) NavigationDestination(icon: const Icon(Icons.more_horiz), label: l.more),
             ],
+          ),
           ),
         );
       },
