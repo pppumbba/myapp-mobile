@@ -1,8 +1,14 @@
+import 'dart:convert';
+import 'dart:math';
 import 'dart:ui' as ui;
+
+import 'package:crypto/crypto.dart';
+import 'package:flutter/services.dart' show PlatformException;
 
 import 'package:flutter/material.dart' show Color;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 
 import '../api/client.dart';
 import '../api/models.dart';
@@ -10,6 +16,24 @@ import '../config.dart';
 import '../l10n/app_localizations.dart';
 
 const defaultAppColor = Color(0xFF4F46E5);
+
+/// Opens [url] in an in-app browser and returns the link it finally lands on (with [scheme]).
+typedef WebAuth = Future<String> Function(String url, String scheme);
+
+final webAuthProvider = Provider<WebAuth>(
+  (ref) => (url, scheme) => FlutterWebAuth2.authenticate(url: url, callbackUrlScheme: scheme),
+);
+
+/// Whether the backend has Google sign-in set up (and this build can come back from it).
+final googleSignInProvider = FutureProvider<bool>((ref) async {
+  if (ref.watch(appConfigProvider).appId.isEmpty) return false;
+  try {
+    final r = await ref.read(apiClientProvider).get<dynamic>('/auth/providers');
+    return r is Map && r['google'] == true;
+  } catch (_) {
+    return false;
+  }
+});
 
 /// Where the sign-in token is kept between launches.
 abstract class TokenStorage {
@@ -174,11 +198,41 @@ class SessionController extends Notifier<SessionState> {
     }
   }
 
-  Future<void> signIn(String email, String password) async {
+  Future<void> signIn(String email, String password) => _signInWith(
+      () => _client.post<Map<String, dynamic>>('/login', {'email': email, 'password': password}));
+
+  /// Google in the in-app browser; the backend comes back to the app's link with a one-time code,
+  /// which only this app can swap for a token (it holds the secret behind the challenge).
+  Future<void> signInWithGoogle() async {
+    final config = ref.read(appConfigProvider);
+    final rnd = Random.secure();
+    final verifier = base64UrlEncode(List.generate(48, (_) => rnd.nextInt(256))).replaceAll('=', '');
+    final challenge = base64UrlEncode(sha256.convert(utf8.encode(verifier)).bytes).replaceAll('=', '');
+    final url = '${config.webBase}/auth/google/redirect?${Uri(queryParameters: {'app': config.authScheme, 'challenge': challenge}).query}';
+    final String back;
+    try {
+      back = await ref.read(webAuthProvider)(url, config.authScheme);
+    } on PlatformException catch (e) {
+      // Closing the browser is not an error.
+      if (e.code != 'CANCELED') state = _signedOut(error: deviceStrings().somethingWrong);
+      return;
+    }
+    final q = Uri.parse(back).queryParameters;
+    final code = q['google_code'];
+    if (code == null) {
+      state = _signedOut(error: q['google_error'] ?? deviceStrings().somethingWrong);
+      return;
+    }
+    await _signInWith(() => _client.post<Map<String, dynamic>>(
+        '/auth/google/exchange', {'code': code, 'verifier': verifier}));
+  }
+
+  /// Signs in with what [login] answers (`{token, customers}`), keeping only a token for this app's customer.
+  Future<void> _signInWith(Future<Map<String, dynamic>> Function() login) async {
     final info = state.info;
     state = SessionState(loading: true, info: info);
     try {
-      final j = await _client.post<Map<String, dynamic>>('/login', {'email': email, 'password': password});
+      final j = await login();
       var token = j['token'] as String;
       final customers = (j['customers'] as List? ?? const []).whereType<Map>().toList();
       final code = ref.read(appConfigProvider).customerCode ?? info?.customerCode;

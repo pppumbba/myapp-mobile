@@ -11,8 +11,11 @@ import 'package:wand_mobile/form/form_screen.dart';
 import 'package:wand_mobile/l10n/app_localizations.dart';
 import 'package:wand_mobile/meta/defs.dart';
 import 'package:wand_mobile/nav/menu.dart';
+import 'package:wand_mobile/nav/notifications.dart';
+import 'package:wand_mobile/nav/pill_bar.dart';
 import 'package:wand_mobile/nav/shell.dart';
 import 'package:wand_mobile/stage_query/stage_query_sheet.dart';
+import 'package:wand_mobile/widgets/inchworm_tabs.dart';
 
 class SignedIn extends SessionController {
   @override
@@ -34,6 +37,10 @@ class MenuHolder extends Notifier<MobileMenu> {
 MenuEntry entry(int id, String name, [String? group]) =>
     MenuEntry(MetaParam(id: id, paramName: name, labelName: name, refMetaId: id), group);
 
+/// A bottom-bar section holding [screens] (a menu group, no screen of its own).
+MenuEntry section(int id, String name, List<MenuEntry> screens) =>
+    MenuEntry(MetaParam(id: id, paramName: name, labelName: name), null, screens);
+
 Future<(ProviderContainer, NotifierProvider<MenuHolder, MobileMenu>)> pumpShell(
   WidgetTester tester,
   MobileMenu menu, {
@@ -43,6 +50,7 @@ Future<(ProviderContainer, NotifierProvider<MenuHolder, MobileMenu>)> pumpShell(
 ) async {
   final holder = NotifierProvider<MenuHolder, MobileMenu>(() => MenuHolder(menu));
   final container = ProviderContainer(overrides: [
+    notificationsProvider.overrideWith((ref) async => NotificationPage(const [], 0)),
     sessionProvider.overrideWith(SignedIn.new),
     mobileMenuProvider.overrideWith((ref) async {
       if (menuFails) throw ApiError(0, defaultUnreachableMessage);
@@ -70,16 +78,17 @@ Future<(ProviderContainer, NotifierProvider<MenuHolder, MobileMenu>)> pumpShell(
   return (container, holder);
 }
 
-Finder inBar(String text) => find.descendant(of: find.byType(NavigationBar), matching: find.text(text));
+Finder inBar(String text) => find.descendant(of: find.byType(PillNavBar), matching: find.byTooltip(text));
 
 void main() {
   pushedPageTests();
+  sectionTests();
   testWidgets('3 tabs plus More: opens a More screen with back button', (tester) async {
     await pumpShell(
       tester,
       MobileMenu(
         [entry(1, 'Orders'), entry(2, 'Items'), entry(3, 'Stock')],
-        [entry(4, 'Reports', 'Finance'), entry(5, 'Ledger', 'Finance')],
+        [section(90, 'Finance', [entry(4, 'Reports', 'Finance'), entry(5, 'Ledger', 'Finance')])],
       ),
     );
     expect(inBar('Orders'), findsOneWidget);
@@ -94,19 +103,19 @@ void main() {
     await tester.tap(find.text('Reports'));
     await tester.pumpAndSettle();
     expect(find.text('M4'), findsOneWidget);
-    expect(find.byType(BackButton), findsOneWidget);
+    expect(find.byTooltip('Back'), findsOneWidget);
   });
 
   testWidgets('one screen: no NavigationBar, no crash', (tester) async {
     await pumpShell(tester, MobileMenu([entry(1, 'Orders')], const []));
     expect(tester.takeException(), isNull);
-    expect(find.byType(NavigationBar), findsNothing);
+    expect(find.byType(PillNavBar), findsNothing);
     expect(find.text('M1'), findsOneWidget);
   });
 
   testWidgets('two screens: NavigationBar with two destinations and no More', (tester) async {
     await pumpShell(tester, MobileMenu([entry(1, 'Orders'), entry(2, 'Items')], const []));
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(PillNavBar), findsOneWidget);
     expect(inBar('Orders'), findsOneWidget);
     expect(inBar('Items'), findsOneWidget);
     expect(inBar('More'), findsNothing);
@@ -115,7 +124,7 @@ void main() {
   testWidgets('no screens: shows the nothing-to-show message', (tester) async {
     await pumpShell(tester, MobileMenu(const [], const []));
     expect(find.text('There is nothing to show in this app yet.'), findsOneWidget);
-    expect(find.byType(NavigationBar), findsNothing);
+    expect(find.byType(PillNavBar), findsNothing);
   });
 
   testWidgets('More disappearing while on /more returns to the first tab', (tester) async {
@@ -132,6 +141,20 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('M1'), findsOneWidget);
     expect(inBar('More'), findsNothing);
+  });
+
+  testWidgets('four tabs plus More: five icons, the fourth tab and More both open', (tester) async {
+    await pumpShell(
+      tester,
+      MobileMenu([entry(1, 'A'), entry(2, 'B'), entry(3, 'C'), entry(4, 'D')], [entry(5, 'Reports')]),
+    );
+    expect(find.descendant(of: find.byType(PillNavBar), matching: find.byType(Icon)), findsNWidgets(5));
+    await tester.tap(inBar('D'));
+    await tester.pumpAndSettle();
+    expect(find.text('M4'), findsOneWidget);
+    await tester.tap(inBar('More'));
+    await tester.pumpAndSettle();
+    expect(find.text('Reports'), findsWidgets);
   });
 
   testWidgets('a fourth tab disappearing while on it returns to the first tab', (tester) async {
@@ -154,7 +177,7 @@ void pushedPageTests() {
   testWidgets('system back on another tab goes to the first tab; a More screen goes back to More', (tester) async {
     await pumpShell(
       tester,
-      MobileMenu([entry(1, 'Orders'), entry(2, 'Items')], [entry(4, 'Reports', 'Finance')]),
+      MobileMenu([entry(1, 'Orders'), entry(2, 'Items')], [section(90, 'Finance', [entry(4, 'Reports', 'Finance')])]),
     );
     await tester.tap(inBar('Items'));
     await tester.pumpAndSettle();
@@ -162,7 +185,7 @@ void pushedPageTests() {
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(find.text('M1'), findsOneWidget);
-    expect(tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex, 0);
+    expect(tester.widget<PillNavBar>(find.byType(PillNavBar)).selectedIndex, 0);
 
     await tester.tap(inBar('More'));
     await tester.pumpAndSettle();
@@ -189,18 +212,18 @@ void pushedPageTests() {
             )),
       ],
     );
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(PillNavBar), findsOneWidget);
     bool? result;
     openForm(tester.element(find.text('M1')), formMetaId: 9).then((r) => result = r);
     await tester.pumpAndSettle();
     expect(find.text('Order form'), findsOneWidget);
-    expect(find.byType(NavigationBar), findsNothing);
+    expect(find.byType(PillNavBar), findsNothing);
     expect(find.byType(AppBar), findsOneWidget);
 
     await tester.pageBack();
     await tester.pumpAndSettle();
     expect(result, isFalse);
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(PillNavBar), findsOneWidget);
   });
 
   testWidgets('a sheet opened from a tab sits above the NavigationBar (root navigator)', (tester) async {
@@ -225,5 +248,57 @@ void pushedPageTests() {
     await pumpShell(tester, MobileMenu([entry(1, 'Orders')], const []), menuFails: true);
     expect(find.text(defaultUnreachableMessage), findsOneWidget);
     expect(find.text('Retry'), findsOneWidget);
+  });
+}
+
+void sectionTests() {
+  MobileMenu ops() => MobileMenu([
+        section(90, 'Ops', [entry(1, 'Orders', 'Ops'), entry(2, 'Items', 'Ops')]),
+        entry(3, 'Stock'),
+      ], const []);
+
+  testWidgets('top bar: no app name; menu search, notifications and profile', (tester) async {
+    await pumpShell(tester, ops());
+    expect(find.descendant(of: find.byType(AppBar), matching: find.text('Shop')), findsNothing);
+    expect(find.byTooltip('Search screens'), findsOneWidget);
+    expect(find.byTooltip('Notifications'), findsOneWidget);
+    expect(find.byTooltip('Account'), findsOneWidget);
+  });
+
+  testWidgets('the bar holds sections; a section with screens shows them as a tab strip', (tester) async {
+    await pumpShell(tester, ops());
+    expect(inBar('Ops'), findsOneWidget);
+    expect(inBar('Orders'), findsNothing);
+    expect(find.byType(InchwormTabBar), findsOneWidget);
+    expect(find.text('M1'), findsOneWidget);
+    await tester.tap(find.descendant(of: find.byType(InchwormTabBar), matching: find.text('Items')));
+    await tester.pumpAndSettle();
+    expect(find.text('M2'), findsOneWidget);
+
+    await tester.tap(inBar('Stock'));
+    await tester.pumpAndSettle();
+    expect(find.text('M3'), findsOneWidget);
+    expect(find.byType(InchwormTabBar), findsNothing, reason: 'a lone screen has no strip');
+  });
+
+  testWidgets('menu search finds a screen by name and opens it in its section tab', (tester) async {
+    await pumpShell(tester, ops());
+    await tester.tap(inBar('Stock'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Search screens'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'ite');
+    await tester.pump();
+    expect(find.widgetWithText(ListTile, 'Orders'), findsNothing);
+    await tester.tap(find.widgetWithText(ListTile, 'Items'));
+    await tester.pumpAndSettle();
+    expect(find.text('M2'), findsOneWidget);
+    expect(tester.widget<PillNavBar>(find.byType(PillNavBar)).selectedIndex, 0);
+
+    await tester.tap(find.byTooltip('Search screens'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'zzz');
+    await tester.pump();
+    expect(find.text('No screen matches.'), findsOneWidget);
   });
 }

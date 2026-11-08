@@ -23,10 +23,11 @@
   "welcome": "Signed in as {name}",
   "@welcome": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
-  }
-,
+  },
   "search": "Search",
   "noResults": "No results",
   "save": "Save",
@@ -43,8 +44,12 @@
   "stepOf": "Step {step} of {total}",
   "@stepOf": {
     "placeholders": {
-      "step": {"type": "int"},
-      "total": {"type": "int"}
+      "step": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "filter": "Filter",
@@ -60,22 +65,39 @@
   "filterFirst": "Choose a filter first: {labels}",
   "@filterFirst": {
     "placeholders": {
-      "labels": {"type": "String"}
+      "labels": {
+        "type": "String"
+      }
     }
   },
   "stageNothing": "Nothing to change: no rows match.",
   "stageWillChange": "This will change {n} rows. Run it?",
   "@stageWillChange": {
     "placeholders": {
-      "n": {"type": "int"}
+      "n": {
+        "type": "int"
+      }
     }
   },
   "stageDone": "Done: {n} rows changed.",
   "@stageDone": {
     "placeholders": {
-      "n": {"type": "int"}
+      "n": {
+        "type": "int"
+      }
     }
   },
   "stageFailed": "The query could not run.",
-  "fixErrors": "Check the marked fields."
+  "fixErrors": "Check the marked fields.",
+  "notifications": "Notifications",
+  "noNotifications": "No notifications yet.",
+  "markAllRead": "Mark all read",
+  "searchMenus": "Search screens",
+  "noMenuMatch": "No screen matches.",
+  "welcomeBack": "Welcome back",
+  "signInToContinue": "Sign in to continue",
+  "or": "or",
+  "continueWithGoogle": "Continue with Google",
+  "showPassword": "Show password",
+  "hidePassword": "Hide password"
 }

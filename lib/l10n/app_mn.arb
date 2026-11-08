@@ -20,8 +20,7 @@
   "inactive": "Идэвхгүй",
   "comingSoon": "Удахгүй",
   "noScreens": "Энэ аппад харуулах зүйл одоохондоо алга.",
-  "welcome":"{name} нэрээр нэвтэрсэн"
-,
+  "welcome": "{name} нэрээр нэвтэрсэн",
   "search": "Хайх",
   "noResults": "Илэрц олдсонгүй",
   "save": "Хадгалах",
@@ -35,8 +34,7 @@
   "autonumberNext": "Хадгалах үед олгоно: энэ бол дараагийн дугаар.",
   "autonumberExisting": "Нэмэх үед дугаарласан.",
   "clear": "Арилгах",
-  "stepOf": "{total} алхмын {step}-р алхам"
-,
+  "stepOf": "{total} алхмын {step}-р алхам",
   "filter": "Шүүлтүүр",
   "apply": "Хэрэглэх",
   "add": "Нэмэх",
@@ -52,5 +50,16 @@
   "stageWillChange": "{n} мөр өөрчлөгдөнө. Ажиллуулах уу?",
   "stageDone": "Боллоо: {n} мөр өөрчлөгдлөө.",
   "stageFailed": "Асуулгыг ажиллуулж чадсангүй.",
-  "fixErrors": "Тэмдэглэсэн талбаруудыг шалгана уу."
+  "fixErrors": "Тэмдэглэсэн талбаруудыг шалгана уу.",
+  "notifications": "Мэдэгдэл",
+  "noNotifications": "Мэдэгдэл алга.",
+  "markAllRead": "Бүгдийг уншсан",
+  "searchMenus": "Цэс хайх",
+  "noMenuMatch": "Тохирох цэс алга.",
+  "welcomeBack": "Тавтай морил",
+  "signInToContinue": "Үргэлжлүүлэхийн тулд нэвтэрнэ үү",
+  "or": "эсвэл",
+  "continueWithGoogle": "Google-ээр нэвтрэх",
+  "showPassword": "Нууц үг харуулах",
+  "hidePassword": "Нууц үг нуух"
 }

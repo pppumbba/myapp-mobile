@@ -174,4 +174,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get fixErrors => 'Check the marked fields.';
+
+  @override
+  String get notifications => 'Notifications';
+
+  @override
+  String get noNotifications => 'No notifications yet.';
+
+  @override
+  String get markAllRead => 'Mark all read';
+
+  @override
+  String get searchMenus => 'Search screens';
+
+  @override
+  String get noMenuMatch => 'No screen matches.';
+
+  @override
+  String get welcomeBack => 'Welcome back';
+
+  @override
+  String get signInToContinue => 'Sign in to continue';
+
+  @override
+  String get or => 'or';
+
+  @override
+  String get continueWithGoogle => 'Continue with Google';
+
+  @override
+  String get showPassword => 'Show password';
+
+  @override
+  String get hidePassword => 'Hide password';
 }

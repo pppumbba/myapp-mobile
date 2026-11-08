@@ -12,13 +12,18 @@ import '../form/values.dart';
 import '../l10n/app_localizations.dart';
 import '../meta/defs.dart';
 import '../nav/icons.dart';
+import '../nav/pill_bar.dart' show pillViolet;
 import '../screens/screen_view.dart';
 import '../stage_query/stage_query_sheet.dart';
+import '../widgets/pull_refresh.dart';
+import '../widgets/expanding_search.dart';
+import '../widgets/speed_dial.dart';
 import 'card_slots.dart';
 import 'cells.dart';
 import 'filter_sheet.dart';
 import 'grid_query.dart';
 import 'record_card.dart';
+import 'swipe_actions.dart';
 import 'row_actions.dart';
 
 /// A datagrid as a list of cards: search, filter sheet with chips, infinite scroll, Add FAB,
@@ -53,6 +58,9 @@ class _GridScreenState extends ConsumerState<GridScreen> {
   bool _sheetShownForMissing = false;
   // Lookup values whose prefetch finished: a still-missing text then really failed.
   final Set<(LookupSpec, String)> _resolved = {};
+  // Records a pull-to-refresh brought in: they glow once.
+  Set<String> _glowIds = const {};
+  int _glowGen = 0;
 
   late final ApiClient _client = ref.read(apiClientProvider);
 
@@ -93,6 +101,21 @@ class _GridScreenState extends ConsumerState<GridScreen> {
     if (!_scroll.hasClients || _loading || _loadingMore || _error != null) return;
     if (_q.page >= _lastPage) return;
     if (_scroll.position.pixels >= _scroll.position.maxScrollExtent - 300) _loadMore();
+  }
+
+  /// Pull to refresh: reloads, then marks the records that weren't there before.
+  Future<void> _pullReload() async {
+    final pk = primaryKey(_params);
+    final before = {for (final r in _rows) '${r[pk]}'};
+    await _reload();
+    if (!mounted || before.isEmpty) return;
+    final fresh = {for (final r in _rows) if (r[pk] != null && !before.contains('${r[pk]}')) '${r[pk]}'};
+    if (fresh.isNotEmpty) {
+      setState(() {
+        _glowIds = fresh;
+        _glowGen++;
+      });
+    }
   }
 
   /// Reloads from page 1. Old rows stay visible until the answer lands.
@@ -339,7 +362,8 @@ class _GridScreenState extends ConsumerState<GridScreen> {
       case 'delete':
         final id = row == null ? null : actionRecordId(a, row, pk);
         if (a.formMetaId == null || id == null) return _openOnWeb();
-        return _delete(a.formMetaId!, id);
+        await _delete(a.formMetaId!, id);
+        return;
       case 'stage_query':
         if (a.formMetaId == null) return _openOnWeb();
         if (await runStageQuery(context, stageQueryMetaId: a.formMetaId!, params: params) && mounted) _reload();
@@ -357,7 +381,8 @@ class _GridScreenState extends ConsumerState<GridScreen> {
     return _afterForm(openForm(context, formMetaId: target, defaults: params, fixed: widget.fixed));
   }
 
-  Future<void> _delete(int formMetaId, String id) async {
+  /// Asks, then deletes; true when the record is gone. [reload] refreshes the list afterwards.
+  Future<bool> _delete(int formMetaId, String id, {bool reload = true}) async {
     final l = AppLocalizations.of(context);
     final ok = await showDialog<bool>(
       context: context,
@@ -369,14 +394,61 @@ class _GridScreenState extends ConsumerState<GridScreen> {
         ],
       ),
     );
-    if (ok != true || !mounted) return;
+    if (ok != true || !mounted) return false;
     try {
       await ref.read(apiClientProvider).delete('/metas/$formMetaId/data/$id');
-      if (mounted) _reload();
+      if (mounted && reload) _reload();
+      return true;
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e is ApiError ? e.message : l.somethingWrong)));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e is ApiError ? e.message : l.somethingWrong)));
+      return false;
     }
+  }
+
+  /// The buttons a swiped card shows: up to three, delete outermost; extra actions go behind More.
+  List<SwipeAction> _swipeActions(Map<String, dynamic> row, List<MetaAction> rowActs) {
+    final l = AppLocalizations.of(context);
+    final del = rowActs.where((a) => a.action == 'delete').firstOrNull;
+    final others = [for (final a in rowActs) if (a != del) a];
+    final room = del == null ? 3 : 2;
+    final shown = others.length > room ? others.take(room - 1).toList() : others;
+    SwipeAction button(MetaAction a) => SwipeAction(
+          icon: _actionIcon(a),
+          label: a.label ?? a.action ?? '',
+          color: a.action == 'edit' ? pillViolet : const Color(0xFF5B5A7A),
+          onPressed: () async {
+            await _run(a, row);
+            return false;
+          },
+        );
+    return [
+      for (final a in shown) button(a),
+      if (others.length > room)
+        SwipeAction(
+          icon: Icons.more_horiz,
+          label: l.more,
+          color: const Color(0xFF8C8AA8),
+          onPressed: () async {
+            await _rowSheet(row, rowActs);
+            return false;
+          },
+        ),
+      if (del != null)
+        SwipeAction(
+          icon: Icons.delete_outline,
+          label: del.label ?? l.delete,
+          color: deleteRed,
+          destructive: true,
+          onPressed: () async {
+            final id = actionRecordId(del, row, primaryKey(_params));
+            if (del.formMetaId == null || id == null) {
+              _openOnWeb();
+              return false;
+            }
+            return _delete(del.formMetaId!, id, reload: false);
+          },
+        ),
+    ];
   }
 
   // ---- build ----
@@ -408,58 +480,48 @@ class _GridScreenState extends ConsumerState<GridScreen> {
     final add = addAction(all, can: _can, gridMetaId: widget.metaId);
     final rowActs = rowActions(all, can: _can, gridMetaId: widget.metaId);
     final menu = toolbarActions(all, can: _can, gridMetaId: widget.metaId);
+    // With an add button and more than one thing to start, the + opens them all (the ⋮ menu goes).
+    final dial = add == null ? const <MetaAction>[] : [...addActions(all, can: _can, gridMetaId: widget.metaId), ...menu];
+    final useDial = dial.length > 1;
     final filters = _filters;
     final slots = _slots;
 
     return Scaffold(
       floatingActionButton: add == null
           ? null
-          : FloatingActionButton(tooltip: add.label ?? l.add, onPressed: () => _add(add), child: const Icon(Icons.add)),
+          : SpeedDialFab(
+              tooltip: add.label ?? l.add,
+              onPressed: () => _add(add),
+              items: !useDial
+                  ? const []
+                  : [
+                      for (final (i, a) in dial.indexed)
+                        SpeedDialItem(
+                          icon: a.action == 'add' ? (a.iconCls == null ? Icons.note_add_outlined : menuIcon(a.iconCls)) : _actionIcon(a),
+                          label: a.label ?? a.action ?? '',
+                          color: speedDialColors[i % speedDialColors.length],
+                          onTap: () => a.action == 'add' ? _add(a) : _run(a, null),
+                        ),
+                    ],
+            ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 4, 4),
+            padding: const EdgeInsets.fromLTRB(16, 8, 4, 4),
             child: Row(children: [
-              Expanded(
-                child: TextField(
-                  controller: _searchText,
-                  onChanged: _onSearch,
-                  textInputAction: TextInputAction.search,
-                  decoration: InputDecoration(
-                    hintText: l.search,
-                    prefixIcon: const Icon(Icons.search),
-                    isDense: true,
-                    border: const OutlineInputBorder(),
-                  ),
-                ),
-              ),
-              if (filters.isNotEmpty)
-                IconButton(
-                  tooltip: l.filter,
-                  onPressed: _openFilters,
-                  icon: Badge(
-                    isLabelVisible: _q.filter.isNotEmpty,
-                    label: Text('${_q.filter.length}'),
-                    child: const Icon(Icons.filter_list),
-                  ),
-                ),
-              if (menu.isNotEmpty)
+              Expanded(child: ExpandingSearch(controller: _searchText, onChanged: _onSearch, hint: l.search, alwaysOpen: true)),
+              if (menu.isNotEmpty && !useDial)
                 PopupMenuButton<MetaAction>(
                   tooltip: l.actions,
                   icon: const Icon(Icons.more_vert),
                   onSelected: (a) => _run(a, null),
                   itemBuilder: (_) => [for (final a in menu) PopupMenuItem(value: a, child: Text(a.label ?? a.action ?? ''))],
                 ),
+              if (menu.isEmpty || useDial) const SizedBox(width: 12),
             ]),
           ),
-          if (_q.filter.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Wrap(spacing: 8, children: [
-                for (final e in _q.filter.entries) _chip(e.key, e.value, filters, l),
-              ]),
-            ),
+          if (filters.isNotEmpty || _q.filter.isNotEmpty) _filterRow(filters, l),
           if (_footerText(l) case final f? when f.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
@@ -472,14 +534,76 @@ class _GridScreenState extends ConsumerState<GridScreen> {
     );
   }
 
-  Widget _chip(String path, String value, List<MetaParam> filters, AppLocalizations l) {
-    final fp = filters.where((f) => pathOf(f) == path).firstOrNull;
-    final text = fp == null ? value : filterValueText(fp, value, l: l, lookups: ref.read(lookupServiceProvider));
-    return InputChip(
-      label: Text('${fp?.label ?? _labelOf(path)}: $text'),
-      onPressed: _openFilters,
-      onDeleted: () => _removeFilter(path),
+  /// One chip per filter field, scrolling sideways: tap to pick that field's value, × to drop it.
+  /// The first chip opens every filter at once (with counts); a filter set some other way
+  /// (a preset or a drill-down) gets its own removable chip at the end.
+  Widget _filterRow(List<MetaParam> filters, AppLocalizations l) {
+    final scheme = Theme.of(context).colorScheme;
+    final paths = {for (final f in filters) pathOf(f)};
+    Widget chip({required String label, required bool on, VoidCallback? onTap, VoidCallback? onClear}) => InputChip(
+          label: Row(mainAxisSize: MainAxisSize.min, children: [
+            ConstrainedBox(constraints: const BoxConstraints(maxWidth: 180), child: Text(label, overflow: TextOverflow.ellipsis)),
+            if (!on) const Icon(Icons.arrow_drop_down, size: 18),
+          ]),
+          selected: on,
+          showCheckmark: false,
+          selectedColor: pillViolet.withValues(alpha: 0.28),
+          side: BorderSide(color: on ? pillViolet : scheme.outlineVariant),
+          onPressed: onTap,
+          onDeleted: on ? onClear : null,
+        );
+    return SizedBox(
+      height: 48,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        children: [
+          if (filters.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Center(
+                child: IconButton.filledTonal(
+                  tooltip: l.filter,
+                  onPressed: _openFilters,
+                  icon: Badge(isLabelVisible: _q.filter.isNotEmpty, label: Text('${_q.filter.length}'), child: const Icon(Icons.tune, size: 20)),
+                ),
+              ),
+            ),
+          for (final fp in filters)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Center(
+                child: chip(
+                  label: switch (_q.filter[pathOf(fp)]) {
+                    final v? => '${fp.label}: ${filterValueText(fp, v, l: l, lookups: ref.read(lookupServiceProvider))}',
+                    null => fp.label,
+                  },
+                  on: _q.filter.containsKey(pathOf(fp)),
+                  onTap: () => _openFilter(fp),
+                  onClear: () => _removeFilter(pathOf(fp)),
+                ),
+              ),
+            ),
+          for (final e in _q.filter.entries)
+            if (!paths.contains(e.key))
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Center(child: chip(label: '${_labelOf(e.key)}: ${e.value}', on: true, onClear: () => _removeFilter(e.key))),
+              ),
+        ],
+      ),
     );
+  }
+
+  /// The filter sheet for one field; only that field's value changes.
+  Future<void> _openFilter(MetaParam fp) async {
+    final path = pathOf(fp);
+    final picked = await showFilterSheet(context, gridMetaId: widget.metaId, filters: [fp], values: _q.filter, query: _q.toQuery());
+    if (picked == null || !mounted) return;
+    _q.filter = {..._q.filter}..remove(path);
+    if (picked[path] case final v? when v.isNotEmpty) _q.filter = {..._q.filter, path: v};
+    _sheetShownForMissing = false;
+    _reload();
   }
 
   String? _footerText(AppLocalizations l) {
@@ -498,8 +622,8 @@ class _GridScreenState extends ConsumerState<GridScreen> {
   }
 
   Widget _list(AppLocalizations l, CardSlots slots, List<MetaAction> all, List<MetaAction> rowActs) {
-    Widget scrollable(Widget child) => RefreshIndicator(
-          onRefresh: _reload,
+    Widget scrollable(Widget child) => PullRefresh(
+          onRefresh: _pullReload,
           child: LayoutBuilder(
             builder: (_, c) => SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -522,8 +646,8 @@ class _GridScreenState extends ConsumerState<GridScreen> {
     }
 
     final more = _q.page < _lastPage || _loadingMore || _error != null;
-    return RefreshIndicator(
-      onRefresh: _reload,
+    return PullRefresh(
+      onRefresh: _pullReload,
       child: ListView.builder(
         controller: _scroll,
         physics: const AlwaysScrollableScrollPhysics(),
@@ -537,12 +661,30 @@ class _GridScreenState extends ConsumerState<GridScreen> {
             return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
           }
           final row = _rows[i];
-          return RecordCard(
-            slots: slots,
-            row: row,
-            lookupText: _lookupText,
-            onTap: () => _tap(row, all),
-            onMore: rowActs.isEmpty ? null : () => _rowSheet(row, rowActs),
+          final id = row[primaryKey(_params)];
+          return Padding(
+            key: id == null ? ObjectKey(row) : ValueKey('$id'),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: SwipeActions(
+              actions: _swipeActions(row, rowActs),
+              // The card has flown off: drop it here, then refresh in the background.
+              onRemoved: () {
+                setState(() => _rows.remove(row));
+                _reload();
+              },
+              child: NewRowGlow(
+                active: _glowIds.contains('$id'),
+                generation: _glowGen,
+                child: RecordCard(
+                  slots: slots,
+                  row: row,
+                  margin: EdgeInsets.zero,
+                  lookupText: _lookupText,
+                  onTap: () => _tap(row, all),
+                  onMore: rowActs.isEmpty ? null : () => _rowSheet(row, rowActs),
+                ),
+              ),
+            ),
           );
         },
       ),

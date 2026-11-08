@@ -76,10 +76,7 @@ class _WandAppState extends ConsumerState<WandApp> {
     return MaterialApp.router(
       routerConfig: ref.watch(routerProvider),
       onGenerateTitle: (_) => s.info?.name ?? '',
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: s.info?.seed ?? defaultAppColor),
-      ),
+      theme: appTheme(s.info?.seed ?? defaultAppColor),
       locale: loc is String && ['en', 'mn'].contains(loc) ? Locale(loc) : null,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: const [
@@ -90,4 +87,31 @@ class _WandAppState extends ConsumerState<WandApp> {
       ],
     );
   }
+}
+
+/// Dark, in the bottom menu's colours: the page a shade deeper than the menu, cards in the menu's own tone.
+ThemeData appTheme(Color seed) {
+  const page = Color(0xFF13131C), card = Color(0xFF1B1A28);
+  final scheme = ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark).copyWith(
+    surface: page,
+    surfaceContainerLowest: const Color(0xFF0E0E15),
+    surfaceContainerLow: card,
+    surfaceContainer: const Color(0xFF1F1E2E),
+    surfaceContainerHigh: const Color(0xFF24223A),
+    surfaceContainerHighest: const Color(0xFF2C2A42),
+    onSurface: const Color(0xFFF4F4F8),
+    onSurfaceVariant: const Color(0xFFA9A7C4),
+    outlineVariant: const Color(0x14FFFFFF),
+  );
+  return ThemeData(
+    useMaterial3: true,
+    colorScheme: scheme,
+    scaffoldBackgroundColor: page,
+    appBarTheme: const AppBarTheme(backgroundColor: page, surfaceTintColor: Colors.transparent),
+    cardTheme: CardThemeData(
+      color: card,
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: Color(0x0FFFFFFF))),
+    ),
+  );
 }

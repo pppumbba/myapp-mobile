@@ -174,4 +174,37 @@ class AppLocalizationsMn extends AppLocalizations {
 
   @override
   String get fixErrors => 'Тэмдэглэсэн талбаруудыг шалгана уу.';
+
+  @override
+  String get notifications => 'Мэдэгдэл';
+
+  @override
+  String get noNotifications => 'Мэдэгдэл алга.';
+
+  @override
+  String get markAllRead => 'Бүгдийг уншсан';
+
+  @override
+  String get searchMenus => 'Цэс хайх';
+
+  @override
+  String get noMenuMatch => 'Тохирох цэс алга.';
+
+  @override
+  String get welcomeBack => 'Тавтай морил';
+
+  @override
+  String get signInToContinue => 'Үргэлжлүүлэхийн тулд нэвтэрнэ үү';
+
+  @override
+  String get or => 'эсвэл';
+
+  @override
+  String get continueWithGoogle => 'Google-ээр нэвтрэх';
+
+  @override
+  String get showPassword => 'Нууц үг харуулах';
+
+  @override
+  String get hidePassword => 'Нууц үг нуух';
 }

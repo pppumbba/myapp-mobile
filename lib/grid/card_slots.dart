@@ -67,21 +67,23 @@ const _web = {
 
 /// The web's status words keep their colour; any other option gets a stable colour by its
 /// index, spread around the scheme's primary hue. Values that are not options are gray.
+/// On a dark scheme every colour is a lighter shade, so the chip stays readable.
 Color statusColor(String value, List<String> options, {ColorScheme? scheme}) {
   final key = value.toLowerCase();
+  final dark = scheme?.brightness == Brightness.dark;
   switch (_web[key]) {
     case 's':
-      return Colors.green.shade700;
+      return dark ? Colors.green.shade300 : Colors.green.shade700;
     case 'w':
-      return Colors.amber.shade800;
+      return dark ? Colors.amber.shade300 : Colors.amber.shade800;
     case 'b':
       return scheme?.primary ?? const Color(0xFF4F46E5);
     case 'e':
-      return Colors.red.shade700;
+      return dark ? Colors.red.shade300 : Colors.red.shade700;
   }
   final i = options.indexWhere((o) => o.toLowerCase() == key);
-  if (i < 0) return Colors.blueGrey;
+  if (i < 0) return dark ? Colors.blueGrey.shade200 : Colors.blueGrey;
   final base = HSLColor.fromColor(scheme?.primary ?? const Color(0xFF4F46E5)).hue;
   final hue = (base + i * 360 / (options.length < 2 ? 2 : options.length)) % 360;
-  return HSLColor.fromAHSL(1, hue, 0.55, 0.42).toColor();
+  return HSLColor.fromAHSL(1, hue, dark ? 0.8 : 0.55, dark ? 0.74 : 0.42).toColor();
 }

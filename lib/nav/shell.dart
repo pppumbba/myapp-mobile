@@ -7,10 +7,14 @@ import '../auth/session.dart';
 import '../l10n/app_localizations.dart';
 import '../meta/defs.dart';
 import '../screens/screen_view.dart';
+import '../widgets/inchworm_tabs.dart';
 import 'icons.dart';
+import 'notifications.dart';
+import 'pill_bar.dart';
+import 'top_bar.dart';
 import 'menu.dart';
 
-const maxTabBranches = 4;
+const maxTabBranches = 5;
 
 /// Where a signed-in user lands: the first tab.
 const landingLocation = '/t/0';
@@ -34,7 +38,16 @@ final mobileMenuProvider = FutureProvider<MobileMenu>(retry: noRetry, (ref) asyn
   );
 });
 
-/// Root page of tab branch [index]: the screen of that menu entry.
+/// Which tab each section shows, by the section's menu item id.
+class SectionTabs extends Notifier<Map<int, int>> {
+  @override
+  Map<int, int> build() => const {};
+  void select(int sectionId, int tab) => state = {...state, sectionId: tab};
+}
+
+final sectionTabProvider = NotifierProvider<SectionTabs, Map<int, int>>(SectionTabs.new);
+
+/// Root page of tab branch [index]: that section's screen, or its screens under a tab strip.
 class TabRoot extends ConsumerWidget {
   final int index;
   const TabRoot(this.index, {super.key});
@@ -44,7 +57,34 @@ class TabRoot extends ConsumerWidget {
     final menu = ref.watch(mobileMenuProvider).value;
     if (menu == null || index >= menu.tabs.length) return const SizedBox.shrink();
     final e = menu.tabs[index];
-    return ScreenView(key: ValueKey(e.metaId), metaId: e.metaId);
+    if (e.children.isEmpty) return ScreenView(key: ValueKey(e.metaId), metaId: e.metaId);
+    return SectionView(key: ValueKey(e.item.id), section: e);
+  }
+}
+
+/// A section's screens: the inchworm strip across the top, the chosen screen below.
+class SectionView extends ConsumerWidget {
+  final MenuEntry section;
+  const SectionView({super.key, required this.section});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final screens = section.screens;
+    final index = (ref.watch(sectionTabProvider)[section.item.id] ?? 0).clamp(0, screens.length - 1);
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      InchwormTabBar(
+        labels: [for (final e in screens) e.label],
+        index: index,
+        onTap: (i) => ref.read(sectionTabProvider.notifier).select(section.item.id, i),
+      ),
+      Expanded(
+        child: SpringPages(
+          index: index,
+          count: screens.length,
+          builder: (_, i) => ScreenView(key: ValueKey(screens[i].metaId), metaId: screens[i].metaId),
+        ),
+      ),
+    ]);
   }
 }
 
@@ -57,22 +97,21 @@ class MorePage extends ConsumerWidget {
     final menu = ref.watch(mobileMenuProvider).value;
     if (menu == null) return const SizedBox.shrink();
     final children = <Widget>[];
-    String? last;
-    for (var i = 0; i < menu.more.length; i++) {
-      final e = menu.more[i];
-      if (e.group != null && e.group != last) {
+    for (final section in menu.more) {
+      if (section.children.isNotEmpty) {
         children.add(Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-          child: Text(e.group!, style: Theme.of(context).textTheme.labelLarge),
+          child: Text(section.label, style: Theme.of(context).textTheme.labelLarge),
         ));
       }
-      last = e.group;
-      children.add(ListTile(
-        leading: Icon(menuIcon(e.item.iconCls)),
-        title: Text(e.label),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => context.go('$moreLocation/screen/${e.metaId}'),
-      ));
+      for (final e in section.screens) {
+        children.add(ListTile(
+          leading: Icon(menuIcon(e.item.iconCls ?? section.item.iconCls)),
+          title: Text(e.label),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => context.go('$moreLocation/screen/${e.metaId}'),
+        ));
+      }
     }
     return ListView(children: children);
   }
@@ -96,20 +135,28 @@ class AppShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
     final menu = ref.watch(mobileMenuProvider);
-    final appName = ref.watch(sessionProvider.select((s) => s.info?.name)) ?? '';
-    final account = IconButton(
-      icon: const Icon(Icons.account_circle_outlined),
-      tooltip: l.account,
-      onPressed: () => showAccountSheet(context, ref),
-    );
+    final userName = ref.watch(sessionProvider.select((s) => '${s.user?['name'] ?? ''}'));
+    final account = AccountAvatar(name: userName, tooltip: l.account, onPressed: () => showAccountSheet(context, ref));
+    // The app's name and mark stay out of the app: the bar holds only the user's tools.
+    PreferredSizeWidget bar({Widget? leading, Widget? search}) => AppBar(
+          automaticallyImplyLeading: false,
+          titleSpacing: 16,
+          title: Row(children: [
+            if (leading != null) ...[leading, const SizedBox(width: 8)],
+            Expanded(child: search ?? const SizedBox.shrink()),
+            const SizedBox(width: 10),
+            if (search != null) ...[const NotificationBell(), const SizedBox(width: 10)],
+            account,
+          ]),
+        );
 
     return menu.when(
       loading: () => Scaffold(
-        appBar: AppBar(title: Text(appName), actions: [account]),
+        appBar: bar(),
         body: const _MenuSkeleton(),
       ),
       error: (e, _) => Scaffold(
-        appBar: AppBar(title: Text(appName), actions: [account]),
+        appBar: bar(),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -131,7 +178,7 @@ class AppShell extends ConsumerWidget {
       data: (m) {
         if (m.all.isEmpty) {
           return Scaffold(
-            appBar: AppBar(title: Text(appName), actions: [account]),
+            appBar: bar(),
             body: Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(l.noScreens))),
           );
         }
@@ -148,19 +195,17 @@ class AppShell extends ConsumerWidget {
         }
         final selected = !branchExists ? 0 : (onMore ? m.tabs.length : branch).clamp(0, destinationCount - 1);
 
-        // The title follows the screen: tab label, "More", or the screen opened from More.
-        var title = appName;
-        var inMoreScreen = false;
-        if (onMore) {
-          title = l.more;
-          final segs = routeState.uri.pathSegments;
-          if (segs.length >= 3 && segs[1] == 'screen') {
-            inMoreScreen = true;
-            final id = int.tryParse(segs[2]);
-            title = m.more.where((e) => e.metaId == id).firstOrNull?.label ?? l.more;
+        final segs = routeState.uri.pathSegments;
+        final inMoreScreen = onMore && segs.length >= 3 && segs[1] == 'screen';
+
+        // A screen picked in the menu search: its section's slot, then its tab (or the More list's entry).
+        void open(MenuEntry section, MenuEntry screen) {
+          final i = m.tabs.indexOf(section);
+          if (i < 0) return context.go('$moreLocation/screen/${screen.metaId}');
+          if (section.children.isNotEmpty) {
+            ref.read(sectionTabProvider.notifier).select(section.item.id, section.screens.indexOf(screen));
           }
-        } else if (branch < m.tabs.length) {
-          title = m.tabs[branch].label;
+          navigationShell.goBranch(i);
         }
 
         // System back on another tab (or the More list) goes to the first tab; only the first tab exits.
@@ -171,16 +216,24 @@ class AppShell extends ConsumerWidget {
             if (!didPop) navigationShell.goBranch(0);
           },
           child: Scaffold(
-          appBar: AppBar(
+          appBar: bar(
             leading: inMoreScreen
-                ? BackButton(onPressed: () => context.go(moreLocation))
+                ? TopBarButton(
+                    tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                    onPressed: () => context.go(moreLocation),
+                    child: const Icon(Icons.arrow_back, size: 22),
+                  )
                 : null,
-            title: Text(title),
-            actions: [account],
+            search: MenuSearchPill(
+              hint: l.searchMenus,
+              onPressed: () => Navigator.of(context, rootNavigator: true).push(MaterialPageRoute<void>(
+                builder: (_) => MenuSearchPage(menu: m, onPick: open),
+              )),
+            ),
           ),
           body: branchExists ? navigationShell : const SizedBox.shrink(),
-          // NavigationBar needs at least two destinations; one screen is shown on its own.
-          bottomNavigationBar: destinationCount < 2 ? null : NavigationBar(
+          // The tab bar needs at least two destinations; one screen is shown on its own.
+          bottomNavigationBar: destinationCount < 2 ? null : PillNavBar(
             selectedIndex: selected,
             onDestinationSelected: (i) {
               if (i < m.tabs.length) {
@@ -191,13 +244,62 @@ class AppShell extends ConsumerWidget {
             },
             destinations: [
               for (final t in m.tabs)
-                NavigationDestination(icon: Icon(menuIcon(t.item.iconCls)), label: t.label),
-              if (hasMore) NavigationDestination(icon: const Icon(Icons.more_horiz), label: l.more),
+                PillDestination(icon: menuIcon(t.item.iconCls), label: t.label),
+              if (hasMore) PillDestination(icon: Icons.more_horiz, label: l.more),
             ],
           ),
           ),
         );
       },
+    );
+  }
+}
+
+/// Searches the user's own menu: every screen they may open, by its name or its section's.
+class MenuSearchPage extends StatefulWidget {
+  final MobileMenu menu;
+  final void Function(MenuEntry section, MenuEntry screen) onPick;
+  const MenuSearchPage({super.key, required this.menu, required this.onPick});
+
+  @override
+  State<MenuSearchPage> createState() => _MenuSearchPageState();
+}
+
+class _MenuSearchPageState extends State<MenuSearchPage> {
+  String _q = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final q = _q.trim().toLowerCase();
+    final hits = [
+      for (final section in [...widget.menu.tabs, ...widget.menu.more])
+        for (final e in section.screens)
+          if (q.isEmpty || e.label.toLowerCase().contains(q) || section.label.toLowerCase().contains(q)) (section, e),
+    ];
+    return Scaffold(
+      appBar: AppBar(
+        title: TextField(
+          autofocus: true,
+          onChanged: (v) => setState(() => _q = v),
+          textInputAction: TextInputAction.search,
+          decoration: InputDecoration(hintText: l.searchMenus, border: InputBorder.none),
+        ),
+      ),
+      body: hits.isEmpty
+          ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(l.noMenuMatch)))
+          : ListView(children: [
+              for (final (section, e) in hits)
+                ListTile(
+                  leading: Icon(menuIcon(e.item.iconCls ?? section.item.iconCls)),
+                  title: Text(e.label),
+                  subtitle: identical(e.item, section.item) ? null : Text(section.label),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    widget.onPick(section, e);
+                  },
+                ),
+            ]),
     );
   }
 }

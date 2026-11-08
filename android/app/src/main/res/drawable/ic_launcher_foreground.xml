@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Wand Studio mark; made by tool/make_icons.js -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#4F39F6" android:fillAlpha="1" android:pathData="M33.32,32 h16.06 a1.32,1.32 0 0 1 1.32,1.32 v16.06 a1.32,1.32 0 0 1 -1.32,1.32 h-16.06 a1.32,1.32 0 0 1 -1.32,-1.32 v-16.06 a1.32,1.32 0 0 1 1.32,-1.32 z"/>
+    <path android:fillColor="#4F39F6" android:fillAlpha="0.55" android:pathData="M53.89,52.9 h10.78 a0.99,0.99 0 0 1 0.99,0.99 v10.78 a0.99,0.99 0 0 1 -0.99,0.99 h-10.78 a0.99,0.99 0 0 1 -0.99,-0.99 v-10.78 a0.99,0.99 0 0 1 0.99,-0.99 z"/>
+    <path android:fillColor="#4F39F6" android:fillAlpha="0.22" android:pathData="M68.52,67.86 h6.82 a0.66,0.66 0 0 1 0.66,0.66 v6.82 a0.66,0.66 0 0 1 -0.66,0.66 h-6.82 a0.66,0.66 0 0 1 -0.66,-0.66 v-6.82 a0.66,0.66 0 0 1 0.66,-0.66 z"/>
+</vector>

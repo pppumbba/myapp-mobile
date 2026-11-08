@@ -8,6 +8,7 @@ import '../api/client.dart';
 import '../api/models.dart';
 import '../auth/session.dart';
 import '../l10n/app_localizations.dart';
+import '../widgets/inchworm_tabs.dart';
 import '../meta/defs.dart';
 import 'errors.dart';
 import 'fields.dart';
@@ -73,7 +74,6 @@ class _FormScreenState extends ConsumerState<FormScreen> with TickerProviderStat
   bool _saving = false;
   bool _savedAny = false;
   int _step = 0;
-  TabController? _tabs;
   // One key per field path, to scroll to the first error.
   final Map<String, GlobalKey> _fieldKeys = {};
 
@@ -95,7 +95,6 @@ class _FormScreenState extends ConsumerState<FormScreen> with TickerProviderStat
   @override
   void dispose() {
     _autoTimer?.cancel();
-    _tabs?.dispose();
     super.dispose();
   }
 
@@ -201,7 +200,6 @@ class _FormScreenState extends ConsumerState<FormScreen> with TickerProviderStat
 
   void _goTo(int i) {
     setState(() => _step = i);
-    if (_tabs != null && _tabs!.index != i && i < _tabs!.length) _tabs!.animateTo(i);
   }
 
   /// Shows the first group holding an error, then scrolls its first error field into view.
@@ -277,7 +275,6 @@ class _FormScreenState extends ConsumerState<FormScreen> with TickerProviderStat
         _preview = const {};
         _step = 0;
       });
-      _tabs?.index = 0;
       _scheduleAutonumber(force: true);
     } on ApiError catch (e) {
       if (!mounted) return;
@@ -356,21 +353,19 @@ class _FormScreenState extends ConsumerState<FormScreen> with TickerProviderStat
       final step = _step.clamp(0, groups.length - 1);
       final list = _list([for (final p in groups[step].fields) _field(p, l)]);
       if (_layout == 'tabs') {
-        if (_tabs == null || _tabs!.length != groups.length) {
-          _tabs?.dispose();
-          _tabs = TabController(length: groups.length, vsync: this, initialIndex: step)
-            ..addListener(() {
-              if (mounted && _tabs != null && _step != _tabs!.index) setState(() => _step = _tabs!.index);
-            });
-        }
         content = Column(children: [
-          TabBar(
-            controller: _tabs,
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
-            tabs: [for (final g in groups) Tab(text: g.name.isEmpty ? l.general : g.name)],
+          InchwormTabBar(
+            labels: [for (final g in groups) g.name.isEmpty ? l.general : g.name],
+            index: step,
+            onTap: _goTo,
           ),
-          Expanded(child: list),
+          Expanded(
+            child: SpringPages(
+              index: step,
+              count: groups.length,
+              builder: (_, i) => _list([for (final p in groups[i].fields) _field(p, l)]),
+            ),
+          ),
         ]);
       } else {
         final name = groups[step].name.isEmpty ? l.general : groups[step].name;

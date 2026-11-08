@@ -12,6 +12,8 @@ import 'package:wand_mobile/auth/session.dart';
 import 'package:wand_mobile/config.dart';
 import 'package:wand_mobile/grid/filter_sheet.dart';
 import 'package:wand_mobile/grid/grid_screen.dart';
+import 'package:wand_mobile/grid/record_card.dart';
+import 'package:wand_mobile/widgets/speed_dial.dart';
 import 'package:wand_mobile/l10n/app_localizations.dart';
 
 /// Returns (status, body); a null result means the network is down.
@@ -140,9 +142,9 @@ void main() {
   testWidgets('grid shows cards with lookup text, never the raw id', (tester) async {
     await pumpGrid(tester, routes());
     expect(find.text('WO-7'), findsOneWidget);
-    expect(find.text('Asset: Pump 1'), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w is Semantics && w.properties.label == 'Asset: Pump 1'), findsOneWidget);
     expect(find.textContaining('#5'), findsNothing);
-    expect(find.byType(FloatingActionButton), findsOneWidget);
+    expect(find.byType(SpeedDialFab), findsOneWidget);
   });
 
   testWidgets('grid shows missing filters message and opens the sheet', (tester) async {
@@ -170,7 +172,7 @@ void main() {
     await tester.tap(find.descendant(of: find.byType(InputChip), matching: find.byTooltip('Delete')));
     await tester.pumpAndSettle();
     expect(dataCalls(a).last.uri.queryParameters.containsKey('filter[status]'), false);
-    expect(find.byType(InputChip), findsNothing);
+    expect(find.widgetWithText(InputChip, 'Status: Open'), findsNothing);
   });
 
   testWidgets('search is debounced and sent as search', (tester) async {
@@ -194,10 +196,10 @@ void main() {
       };
     }));
     expect(dataCalls(a).where((o) => o.uri.queryParameters['page'] == '2'), isEmpty);
-    await tester.fling(find.byType(ListView), const Offset(0, -6000), 3000);
+    await tester.fling(find.byType(ListView).last, const Offset(0, -6000), 3000);
     await tester.pumpAndSettle();
     expect(dataCalls(a).where((o) => o.uri.queryParameters['page'] == '2'), hasLength(1));
-    await tester.fling(find.byType(ListView), const Offset(0, -6000), 3000);
+    await tester.fling(find.byType(ListView).last, const Offset(0, -6000), 3000);
     await tester.pumpAndSettle();
     expect(find.text('WO-219'), findsOneWidget);
     expect(dataCalls(a), hasLength(2));
@@ -206,7 +208,7 @@ void main() {
   testWidgets("delete calls DELETE on the action's form meta", (tester) async {
     final r = routes()..['DELETE /api/metas/129/data/7'] = (_) => (200, {'ok': true});
     final a = await pumpGrid(tester, r);
-    await tester.tap(find.byTooltip('More'));
+    await tester.longPress(find.byType(RecordCard).first);
     await tester.pumpAndSettle();
     expect(find.text('Complete'), findsOneWidget);
     await tester.tap(find.text('Delete'));
@@ -229,7 +231,7 @@ void main() {
         return (200, {'affected': 1, 'statements': [1], 'dry_run': b['dry_run']});
       };
     final a = await pumpGrid(tester, r);
-    await tester.tap(find.byTooltip('More'));
+    await tester.longPress(find.byType(RecordCard).first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Complete'));
     await tester.pumpAndSettle();
@@ -258,7 +260,7 @@ void main() {
       ..['GET /api/metas/130/params'] = ((_) => (200, [gp(1, 'work_order_id', 'Work order id', type: 'integer')]))
       ..['POST /api/metas/130/run'] = (o) => (200, {'affected': 0, 'statements': [0], 'dry_run': true});
     await pumpGrid(tester, r);
-    await tester.tap(find.byTooltip('More'));
+    await tester.longPress(find.byType(RecordCard).first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Complete'));
     await tester.pumpAndSettle();
@@ -272,7 +274,7 @@ void main() {
     // The dry run was a write: the lookup cache was cleared, yet the card never shows the raw id.
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
-    expect(find.text('Asset: Pump 1'), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w is Semantics && w.properties.label == 'Asset: Pump 1'), findsOneWidget);
     expect(find.textContaining('#5'), findsNothing);
   });
 
@@ -365,7 +367,7 @@ void stageQueryGuardTests() {
         return (200, {'affected': 1, 'statements': [1], 'dry_run': true});
       };
     await pumpGrid(tester, r);
-    await tester.tap(find.byTooltip('More'));
+    await tester.longPress(find.byType(RecordCard).first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Complete'));
     await tester.pumpAndSettle();

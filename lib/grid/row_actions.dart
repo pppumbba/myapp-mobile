@@ -26,6 +26,10 @@ List<MetaAction> toolbarActions(List<MetaAction> all, {required Can can, require
 MetaAction? addAction(List<MetaAction> all, {required Can can, required int gridMetaId}) =>
     _ordered(all.where((a) => a.action == 'add')).where((a) => can(gridMetaId, 'create')).firstOrNull;
 
+/// Every `add` action the user may press, in order: two or more make the + a speed dial.
+List<MetaAction> addActions(List<MetaAction> all, {required Can can, required int gridMetaId}) =>
+    can(gridMetaId, 'create') ? _ordered(all.where((a) => a.action == 'add')) : const [];
+
 /// The record an action works on: its `id` param, else the row's primary key.
 String? actionRecordId(MetaAction a, Map<String, dynamic> row, String primaryKey) {
   final id = actionParams(a, row)['id'];

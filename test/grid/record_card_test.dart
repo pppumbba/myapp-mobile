@@ -29,9 +29,9 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.tap(find.byType(InkWell).first);
     await tester.longPress(find.byType(InkWell).first);
-    await tester.tap(find.byIcon(Icons.more_horiz));
+    expect(find.byIcon(Icons.more_horiz), findsNothing);
     expect(tap, 1);
-    expect(more, 2);
+    expect(more, 1);
   });
 
   testWidgets('RecordCard image slot renders for a URL and not for a file value', (tester) async {

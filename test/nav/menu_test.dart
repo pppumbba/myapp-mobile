@@ -48,18 +48,19 @@ const types = {
 bool _supported(int id) => const {'datagrid', 'form'}.contains(types[id]);
 
 void main() {
-  test('Assets app: three tabs plus More, More starts with PM plans', () {
+  test('Assets app: one bottom slot per top-level item with screens; their screens are the tabs', () {
     final m = flattenMenu(assetsTree(), canView: (_) => true, supported: _supported);
-    expect(m.tabs.map((e) => e.item.label), ['Asset register', 'Transfers', 'Work orders']);
-    expect(m.more.first.item.label, 'PM plans');
-    expect(m.more.first.group, 'Maintenance');
-    expect(m.tabs.first.group, 'Assets');
-    expect(m.more.map((e) => e.item.label), [
-      'PM plans', 'PM due now', 'Meter readings', 'Asset transactions', 'Depreciation preview',
-    ]);
+    // Overview (dashboard) and Setup (tabs) open nothing the app shows, so they drop out.
+    expect(m.tabs.map((e) => e.label), ['Assets', 'Maintenance', 'Finance']);
+    expect(m.more, isEmpty);
+    expect(m.tabs[0].screens.map((e) => e.label), ['Asset register', 'Transfers']);
+    expect(m.tabs[1].screens.map((e) => e.label), ['Work orders', 'PM plans', 'PM due now', 'Meter readings']);
+    expect(m.tabs[2].screens.map((e) => e.label), ['Asset transactions', 'Depreciation preview']);
+    expect(m.tabs[1].screens.first.group, 'Maintenance');
+    expect(m.all, hasLength(8));
   });
 
-  test('hidden and non-viewable items are missing', () {
+  test('hidden and non-viewable items are missing; a top-level screen is its own section', () {
     final tree = [
       item('A', ref: 1, order: 1),
       item('B', ref: 2, order: 2, show: false),
@@ -67,8 +68,28 @@ void main() {
       item('G', order: 4, children: [item('D', ref: 4, order: 1)]),
     ];
     final m = flattenMenu(tree, canView: (id) => id != 3, supported: (_) => true);
-    expect(m.tabs.map((e) => e.item.label), ['A', 'D']);
+    expect(m.tabs.map((e) => e.label), ['A', 'G']);
+    expect(m.tabs[0].children, isEmpty, reason: 'a lone screen gets no tab strip');
+    expect(m.tabs[1].screens.map((e) => e.label), ['D']);
     expect(m.more, isEmpty);
+  });
+
+  test('deeper levels join their top-level section; a top-level screen with children comes first', () {
+    final tree = [
+      item('Sales', ref: 1, order: 1, children: [
+        item('Orders', ref: 2, order: 1),
+        item('Reports', order: 2, children: [item('By month', ref: 3)]),
+      ]),
+    ];
+    final m = flattenMenu(tree, canView: (_) => true, supported: (_) => true);
+    expect(m.tabs.single.screens.map((e) => e.label), ['Sales', 'Orders', 'By month']);
+  });
+
+  test('more than five sections: four in the bar, the rest under More', () {
+    final tree = [for (var i = 1; i <= 7; i++) item('S$i', ref: i, order: i)];
+    final m = flattenMenu(tree, canView: (_) => true, supported: (_) => true);
+    expect(m.tabs.map((e) => e.label), ['S1', 'S2', 'S3', 'S4']);
+    expect(m.more.map((e) => e.label), ['S5', 'S6', 'S7']);
   });
 
   test('a hidden group hides its children', () {
@@ -90,10 +111,10 @@ void main() {
     expect(m.more, isEmpty);
   });
 
-  test('four screens are all tabs', () {
-    final tree = [for (var i = 1; i <= 4; i++) item('S$i', ref: i, order: i)];
+  test('five sections are all in the bar', () {
+    final tree = [for (var i = 1; i <= 5; i++) item('S$i', ref: i, order: i)];
     final m = flattenMenu(tree, canView: (_) => true, supported: (_) => true);
-    expect(m.tabs, hasLength(4));
+    expect(m.tabs, hasLength(5));
     expect(m.more, isEmpty);
   });
 }

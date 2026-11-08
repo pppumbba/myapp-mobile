@@ -1,7 +1,8 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -73,15 +74,17 @@ const userRoutes = <String, (int, Object)>{
   Map<String, (int, Object)> routes, {
   String? token,
   String? code,
+  WebAuth? webAuth,
 }) {
   final adapter = FakeAdapter({'GET /api/mobile/5': mobile, 'GET /api/c/acme/mobile/5': mobile, ...routes});
-  final config = AppConfig(appMetaId: 5, customerCode: code, apiBase: 'https://h/api');
+  final config = AppConfig(appMetaId: 5, customerCode: code, apiBase: 'https://h/api', appId: 'mn.shop_app');
   final client = ApiClient(config, dio: Dio()..httpClientAdapter = adapter);
   final storage = MemoryStorage(token);
   final c = ProviderContainer(overrides: [
     appConfigProvider.overrideWithValue(config),
     apiClientProvider.overrideWithValue(client),
     tokenStorageProvider.overrideWithValue(storage),
+    if (webAuth != null) webAuthProvider.overrideWithValue(webAuth),
   ]);
   addTearDown(c.dispose);
   return (c: c, a: adapter, s: storage, client: client);
@@ -89,6 +92,7 @@ const userRoutes = <String, (int, Object)>{
 
 void main() {
   restoreTests();
+  googleTests();
   test('signIn uses bound token when one customer', () async {
     final t = setup({
       'POST /api/login': (200, {
@@ -380,5 +384,55 @@ void restoreTests() {
     expect(s.loading, false);
     expect(s.info, isNotNull);
     expect(sessionRedirect(s, "/splash"), "/sign-in");
+  });
+}
+
+void googleTests() {
+  const loginOk = (200, {
+    'user': {'id': 1},
+    'token': 'G1',
+    'customers': [
+      {'id': 7, 'code': 'acme', 'name': 'Acme', 'is_admin': false},
+    ],
+  });
+
+  test('Google: opens the backend with the app link and a challenge, swaps the code with the secret', () async {
+    late Uri opened;
+    late String scheme;
+    final t = setup({'POST /api/auth/google/exchange': loginOk, ...userRoutes}, webAuth: (url, s) async {
+      opened = Uri.parse(url);
+      scheme = s;
+      return '$s://google-auth?google_code=abc';
+    });
+    final ctl = t.c.read(sessionProvider.notifier);
+    await ctl.start();
+    await ctl.signInWithGoogle();
+
+    expect(opened.toString(), startsWith('https://h/auth/google/redirect?'));
+    expect(scheme, 'mn.shop-app', reason: 'a link scheme may not hold _');
+    expect(opened.queryParameters['app'], 'mn.shop-app');
+    final exchange = t.a.seen.firstWhere((r) => r.uri.path == '/api/auth/google/exchange');
+    final body = (exchange.data is String ? jsonDecode(exchange.data as String) : exchange.data) as Map;
+    expect(body['code'], 'abc');
+    final challenge = base64UrlEncode(sha256.convert(utf8.encode(body['verifier'] as String)).bytes).replaceAll('=', '');
+    expect(opened.queryParameters['challenge'], challenge);
+    expect(t.s.value, 'G1');
+    expect(t.c.read(sessionProvider).user?['name'], 'Bat');
+  });
+
+  test('Google: the backend\'s error is shown; closing the browser is not an error', () async {
+    final t = setup({}, webAuth: (url, s) async => '$s://google-auth?google_error=Only+company.mn');
+    final ctl = t.c.read(sessionProvider.notifier);
+    await ctl.start();
+    await ctl.signInWithGoogle();
+    expect(t.c.read(sessionProvider).error, 'Only company.mn');
+    expect(t.s.value, isNull);
+
+    final closed = setup({}, webAuth: (url, s) async => throw PlatformException(code: 'CANCELED'));
+    final ctl2 = closed.c.read(sessionProvider.notifier);
+    await ctl2.start();
+    await ctl2.signInWithGoogle();
+    expect(closed.c.read(sessionProvider).error, isNull);
+    expect(closed.c.read(sessionProvider).loading, isFalse);
   });
 }

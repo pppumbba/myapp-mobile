@@ -24,6 +24,8 @@ android {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = (appJson["appId"] as String?) ?: "mn.wand.mobile"
         manifestPlaceholders["appName"] = (appJson["appName"] as String?) ?: "Wand"
+        // Google sign-in comes back on <package id>://google-auth (a scheme may not hold _).
+        manifestPlaceholders["authScheme"] = ((appJson["appId"] as String?) ?: "mn.wand.mobile").replace('_', '-')
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

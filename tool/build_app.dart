@@ -86,6 +86,7 @@ Future<void> main(List<String> args) async {
     release ? '--release' : '--debug',
     '--dart-define=APP_META_ID=$app',
     '--dart-define=API_BASE=$api',
+    '--dart-define=APP_ID=$packageId',
     if (customerCode != null && customerCode.isNotEmpty) '--dart-define=CUSTOMER_CODE=$customerCode',
   ];
   if (!build) {
