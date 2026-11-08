@@ -300,6 +300,7 @@ class _GridScreenState extends ConsumerState<GridScreen> {
 
   Future<void> _rowSheet(Map<String, dynamic> row, List<MetaAction> actions) async {
     final picked = await showModalBottomSheet<MetaAction>(
+      useRootNavigator: true,
       context: context,
       showDragHandle: true,
       builder: (ctx) => SafeArea(

@@ -201,6 +201,7 @@ void showAccountSheet(BuildContext context, WidgetRef ref) {
   final email = '${s.user?['email'] ?? ''}';
   final customer = s.info?.customerCode;
   showModalBottomSheet<void>(
+    useRootNavigator: true,
     context: context,
     showDragHandle: true,
     builder: (ctx) => SafeArea(

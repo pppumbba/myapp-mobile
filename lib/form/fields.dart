@@ -144,6 +144,7 @@ class _FieldInputState extends ConsumerState<FieldInput> {
         widget.onChanged('$v');
       case _Kind.select:
         final picked = await showModalBottomSheet<String>(
+          useRootNavigator: true,
           context: context,
           showDragHandle: true,
           builder: (ctx) => SafeArea(

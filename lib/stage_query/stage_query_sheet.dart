@@ -18,6 +18,7 @@ Future<bool> runStageQuery(
 }) async {
   var ran = false;
   await showModalBottomSheet<void>(
+    useRootNavigator: true,
     context: context,
     isScrollControlled: true,
     showDragHandle: true,

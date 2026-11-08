@@ -12,6 +12,7 @@ import 'package:wand_mobile/l10n/app_localizations.dart';
 import 'package:wand_mobile/meta/defs.dart';
 import 'package:wand_mobile/nav/menu.dart';
 import 'package:wand_mobile/nav/shell.dart';
+import 'package:wand_mobile/stage_query/stage_query_sheet.dart';
 
 class SignedIn extends SessionController {
   @override
@@ -173,6 +174,24 @@ void pushedPageTests() {
     await tester.pumpAndSettle();
     expect(result, isFalse);
     expect(find.byType(NavigationBar), findsOneWidget);
+  });
+
+  testWidgets('a sheet opened from a tab sits above the NavigationBar (root navigator)', (tester) async {
+    await pumpShell(
+      tester,
+      MobileMenu([entry(1, 'Orders'), entry(2, 'Items')], const []),
+      extra: [
+        metaDefProvider(9).overrideWith((ref) async => MetaDef(
+              Meta(id: 9, name: 'Complete', type: 'stage_query'),
+              [MetaParam(id: 1, paramName: 'work_order_id', fieldPath: 'work_order_id', labelName: 'Work order', dataType: 'integer', isShow: true)],
+            )),
+      ],
+    );
+    final tab = tester.element(find.text('M1'));
+    runStageQuery(tab, stageQueryMetaId: 9, params: const {});
+    await tester.pumpAndSettle();
+    final inSheet = tester.element(find.text('Work order'));
+    expect(Navigator.of(inSheet), same(Navigator.of(tab, rootNavigator: true)));
   });
 
   testWidgets('an offline menu load shows the unreachable message and Retry', (tester) async {
