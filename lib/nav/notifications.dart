@@ -9,6 +9,9 @@ import '../l10n/app_localizations.dart';
 import '../meta/defs.dart' show noRetry;
 import 'pill_bar.dart' show pillCyan, pillViolet;
 import 'top_bar.dart';
+import '../widgets/drop_toast.dart';
+import '../widgets/snap_sheet.dart';
+import '../widgets/pull_refresh.dart';
 
 /// One of the signed-in user's notifications (user_notifications).
 class AppNotification {
@@ -47,6 +50,37 @@ final notificationsProvider = FutureProvider<NotificationPage>(retry: noRetry, (
   );
 });
 
+/// Refreshes the list and opens it in a sheet.
+void openNotifications(BuildContext context, WidgetRef ref) {
+  ref.invalidate(notificationsProvider);
+  showSnapSheet<void>(context, initial: SnapHeight.half, builder: (_) => const NotificationSheet());
+}
+
+/// The newest notification that arrived between two reads of the list: unread and newer than
+/// anything [prev] held. Null on the first read, so old unread ones never pop up.
+AppNotification? arrivedNotification(NotificationPage? prev, NotificationPage? next) {
+  if (prev == null || next == null) return null;
+  final seen = prev.items.fold<int>(0, (m, n) => n.id > m ? n.id : m);
+  final fresh = [for (final n in next.items) if (!n.read && n.id > seen) n]..sort((a, b) => b.id.compareTo(a.id));
+  return fresh.firstOrNull;
+}
+
+/// Drops a toast out of the top edge for each notification that arrives while signed in;
+/// tapping it opens the list.
+void listenForArrivals(BuildContext context, WidgetRef ref) {
+  ref.listen(notificationsProvider, (prev, next) {
+    final n = arrivedNotification(prev?.value, next.value);
+    if (n == null || !context.mounted) return;
+    showDropToast(
+      context,
+      title: n.title,
+      body: n.body,
+      time: AppLocalizations.of(context).justNow,
+      onTap: () => openNotifications(context, ref),
+    );
+  });
+}
+
 /// The bell in the top bar, with the unread count.
 class NotificationBell extends ConsumerWidget {
   const NotificationBell({super.key});
@@ -56,17 +90,7 @@ class NotificationBell extends ConsumerWidget {
     final unread = ref.watch(notificationsProvider).value?.unread ?? 0;
     return TopBarButton(
       tooltip: AppLocalizations.of(context).notifications,
-      onPressed: () {
-        ref.invalidate(notificationsProvider);
-        showModalBottomSheet<void>(
-          context: context,
-          useRootNavigator: true,
-          showDragHandle: true,
-          isScrollControlled: true,
-          useSafeArea: true,
-          builder: (_) => const NotificationSheet(),
-        );
-      },
+      onPressed: () => openNotifications(context, ref),
       child: Badge(
         isLabelVisible: unread > 0,
         backgroundColor: pillCyan,
@@ -134,7 +158,7 @@ class NotificationSheet extends ConsumerWidget {
                 padding: const EdgeInsets.all(32),
                 child: Text(error is ApiError ? error.message : l.somethingWrong, textAlign: TextAlign.center),
               ),
-            _ => const Padding(padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator())),
+            _ => const Padding(padding: EdgeInsets.all(32), child: Center(child: RefreshRing())),
           },
         ),
       ]),

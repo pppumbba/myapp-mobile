@@ -143,7 +143,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get delete => 'Delete';
 
   @override
-  String get deleteConfirm => 'Delete?';
+  String get deleteConfirm => 'Delete this record?';
 
   @override
   String get check => 'Check';
@@ -207,4 +207,32 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hidePassword => 'Hide password';
+
+  @override
+  String get noData => 'No data yet.';
+
+  @override
+  String get deleteForGood => 'It will be removed for good.';
+
+  @override
+  String get justNow => 'now';
+
+  @override
+  String get today => 'Today';
+
+  @override
+  String get tomorrow => 'Tomorrow';
+
+  @override
+  String get yesterday => 'Yesterday';
+
+  @override
+  String inDays(int count) {
+    return 'In $count days';
+  }
+
+  @override
+  String daysAgo(int count) {
+    return '$count days ago';
+  }
 }

@@ -58,7 +58,7 @@ Future<(ProviderContainer, NotifierProvider<MenuHolder, MobileMenu>)> pumpShell(
     }),
     ...extra,
     for (final id in [1, 2, 3, 4, 5])
-      metaDefProvider(id).overrideWith((ref) async => MetaDef(Meta(id: id, name: 'M$id', type: 'dashboard'), const [])),
+      metaDefProvider(id).overrideWith((ref) async => MetaDef(Meta(id: id, name: 'M$id', type: 'report'), const [])),
   ]);
   addTearDown(container.dispose);
   await tester.pumpWidget(UncontrolledProviderScope(

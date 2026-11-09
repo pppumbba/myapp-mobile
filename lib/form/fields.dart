@@ -7,6 +7,10 @@ import '../l10n/app_localizations.dart';
 import 'lookup.dart';
 import 'lookup_page.dart';
 import 'values.dart';
+import '../widgets/glow_border.dart';
+import '../widgets/liquid_switch.dart';
+import '../widgets/snap_sheet.dart';
+import '../widgets/violet_date_picker.dart';
 
 enum _Kind { boolean, lookup, select, date, datetime, textarea, number, text, other }
 
@@ -106,16 +110,15 @@ class _FieldInputState extends ConsumerState<FieldInput> {
     return required ? '${widget.p.label} *' : widget.p.label;
   }
 
-  InputDecoration _decoration(AppLocalizations l, {Widget? suffix}) => InputDecoration(
+  InputDecoration _decoration(AppLocalizations l, {Widget? suffix}) => withGlowBorders(InputDecoration(
         labelText: _label,
         errorText: widget.error,
         helperText: widget.hint,
         helperMaxLines: 3,
         errorMaxLines: 3,
-        border: const OutlineInputBorder(),
         filled: widget.readOnly,
         suffixIcon: suffix,
-      );
+      ), Theme.of(context).colorScheme);
 
   String _display(AppLocalizations l) {
     final v = _str;
@@ -143,10 +146,9 @@ class _FieldInputState extends ConsumerState<FieldInput> {
         setState(() => _lookup = ('$v', rowLabel(row, spec.displayField)));
         widget.onChanged('$v');
       case _Kind.select:
-        final picked = await showModalBottomSheet<String>(
-          useRootNavigator: true,
-          context: context,
-          showDragHandle: true,
+        final picked = await showSnapSheet<String>(
+          context,
+          initial: SnapHeight.peek,
           builder: (ctx) => SafeArea(
             child: ListView(shrinkWrap: true, children: [
               for (final o in optionsOf(widget.p)!)
@@ -162,11 +164,11 @@ class _FieldInputState extends ConsumerState<FieldInput> {
       case _Kind.date:
       case _Kind.datetime:
         final current = DateTime.tryParse(_str);
-        final day = await showDatePicker(
-          context: context,
-          initialDate: current ?? DateTime.now(),
-          firstDate: DateTime(1900),
-          lastDate: DateTime(2100),
+        final day = await showVioletDatePicker(
+          context,
+          initial: current,
+          first: DateTime(1900),
+          last: DateTime(2100),
         );
         if (day == null || !context.mounted) return;
         if (_kind == _Kind.date) {
@@ -191,14 +193,19 @@ class _FieldInputState extends ConsumerState<FieldInput> {
     final p = widget.p;
     switch (_kind) {
       case _Kind.boolean:
-        return SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: Text(_label),
-          subtitle: widget.error != null
-              ? Text(widget.error!, style: TextStyle(color: Theme.of(context).colorScheme.error))
-              : (widget.hint == null ? null : Text(widget.hint!)),
-          value: widget.value == true,
-          onChanged: widget.readOnly ? null : (b) => widget.onChanged(b),
+        final on = widget.value == true;
+        final change = widget.readOnly ? null : (bool b) => widget.onChanged(b);
+        return MergeSemantics(
+          child: ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(_label),
+            subtitle: widget.error != null
+                ? Text(widget.error!, style: TextStyle(color: Theme.of(context).colorScheme.error))
+                : (widget.hint == null ? null : Text(widget.hint!)),
+            trailing: LiquidSwitch(value: on, onChanged: change),
+            enabled: change != null,
+            onTap: change == null ? null : () => change(!on),
+          ),
         );
       case _Kind.text:
       case _Kind.textarea:

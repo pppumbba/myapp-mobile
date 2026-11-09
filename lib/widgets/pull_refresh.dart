@@ -20,10 +20,13 @@ double pullOffset(double raw) => raw <= 0 ? 0 : 120 * (1 - math.exp(-raw / 160))
 
 /// Pull a list down to refresh it. A ring fills as you pull, spins while [onRefresh] runs,
 /// turns into a check, and the gap closes. [child] must be a scrollable that can always scroll.
+/// While [loading] (a load the list started itself: first load, search, filters) the same
+/// refresh plays without a pull: the list moves down, the ring spins, checks, and the gap closes.
 class PullRefresh extends StatefulWidget {
   final Widget child;
   final Future<void> Function() onRefresh;
-  const PullRefresh({super.key, required this.child, required this.onRefresh});
+  final bool loading;
+  const PullRefresh({super.key, required this.child, required this.onRefresh, this.loading = false});
 
   /// Pull past this many px of list offset and let go to refresh.
   static const armAt = 58.0;
@@ -40,8 +43,36 @@ class _PullRefreshState extends State<PullRefresh> with TickerProviderStateMixin
   double _raw = 0;
   double _from = 0; // list offset when the current settle started
   bool _armed = false;
+  bool _external = false; // the current spin is for [PullRefresh.loading], not a pull
+  DateTime _started = DateTime.now();
 
   bool get _still => MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.loading) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && widget.loading && _phase == _Phase.idle) _startLoading();
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(PullRefresh old) {
+    super.didUpdateWidget(old);
+    if (widget.loading && !old.loading && _phase == _Phase.idle) {
+      _startLoading();
+    } else if (!widget.loading && old.loading && _external) {
+      _external = false;
+      _finish();
+    }
+  }
+
+  void _startLoading() {
+    _external = true;
+    _beginSpin(0);
+  }
 
   @override
   void dispose() {
@@ -103,9 +134,20 @@ class _PullRefreshState extends State<PullRefresh> with TickerProviderStateMixin
       await _close(at);
       return;
     }
+    _beginSpin(at);
+    try {
+      await widget.onRefresh();
+    } catch (_) {
+      // The list shows its own error; the indicator just closes.
+    }
+    await _finish();
+  }
+
+  /// Springs the list to the refresh height from [from] px and spins the ring.
+  void _beginSpin(double from) {
     setState(() {
       _phase = _Phase.refreshing;
-      _from = at;
+      _from = from;
     });
     _check.value = 0;
     if (!_still) {
@@ -115,16 +157,20 @@ class _PullRefreshState extends State<PullRefresh> with TickerProviderStateMixin
     } else {
       _settle.value = 1;
     }
-    final started = DateTime.now();
-    try {
-      await widget.onRefresh();
-    } catch (_) {
-      // The list shows its own error; the indicator just closes.
-    }
+    _started = DateTime.now();
+  }
+
+  /// The refresh is over: the ring turns into a check and the gap closes.
+  Future<void> _finish() async {
     // Spin at least a moment so a fast answer still reads as a refresh.
-    final left = const Duration(milliseconds: 450) - DateTime.now().difference(started);
+    final left = const Duration(milliseconds: 450) - DateTime.now().difference(_started);
     if (left > Duration.zero && !_still) await Future<void>.delayed(left);
     if (!mounted) return;
+    // Another load began meanwhile: keep spinning until it ends too.
+    if (widget.loading) {
+      _external = true;
+      return;
+    }
     _spin.stop();
     setState(() => _phase = _Phase.done);
     if (!_still) {
@@ -145,7 +191,9 @@ class _PullRefreshState extends State<PullRefresh> with TickerProviderStateMixin
       _settle.duration = const Duration(milliseconds: 260);
       await _settle.forward(from: 0);
     }
-    if (mounted) setState(() => _phase = _Phase.idle);
+    if (!mounted) return;
+    setState(() => _phase = _Phase.idle);
+    if (widget.loading) _startLoading();
   }
 
   @override
@@ -205,7 +253,8 @@ class _RingPainter extends CustomPainter {
   final double? spin;
   final double done;
   final Color track;
-  _RingPainter({required this.pull, required this.spin, required this.done, required this.track});
+  final Color? arc; // a solid arc instead of violet → cyan (on a gradient button)
+  _RingPainter({required this.pull, required this.spin, required this.done, required this.track, this.arc});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -214,7 +263,7 @@ class _RingPainter extends CustomPainter {
     final pop = done > 0 ? 0.85 + 0.15 * (1 + 2.9 * math.pow(done - 1, 3) + 1.9 * math.pow(done - 1, 2)) : 1.0;
     canvas.save();
     canvas.translate(c.dx, c.dy);
-    canvas.scale(pop);
+    canvas.scale(pop * size.shortestSide / 34); // drawn for a 34 px box
     canvas.drawCircle(
       Offset.zero,
       r,
@@ -242,8 +291,8 @@ class _RingPainter extends CustomPainter {
           ..style = PaintingStyle.stroke
           ..strokeWidth = 3.5
           ..strokeCap = StrokeCap.round
-          ..shader = const LinearGradient(colors: [pillViolet, pillCyan]).createShader(rect)
-          ..color = Colors.white.withValues(alpha: 1 - done),
+          ..shader = arc == null ? const LinearGradient(colors: [pillViolet, pillCyan]).createShader(rect) : null
+          ..color = (arc ?? Colors.white).withValues(alpha: 1 - done),
       );
     }
     if (done > 0) {
@@ -273,7 +322,57 @@ class _RingPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_RingPainter old) => old.pull != pull || old.spin != spin || old.done != done || old.track != track;
+  bool shouldRepaint(_RingPainter old) =>
+      old.pull != pull || old.spin != spin || old.done != done || old.track != track || old.arc != arc;
+}
+
+/// The refresh ring on its own, spinning, for loads that are not a list refresh: a screen
+/// opening, a Save or Sign in button at work. [onGradient] paints it white for a gradient button.
+class RefreshRing extends StatefulWidget {
+  final double size;
+  final bool onGradient;
+  const RefreshRing({super.key, this.size = 34, this.onGradient = false});
+
+  @override
+  State<RefreshRing> createState() => _RefreshRingState();
+}
+
+class _RefreshRingState extends State<RefreshRing> with SingleTickerProviderStateMixin {
+  late final AnimationController _spin = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Held still (a quarter turn in) when animations are off.
+    if (MediaQuery.maybeDisableAnimationsOf(context) ?? false) {
+      _spin
+        ..stop()
+        ..value = 0.15;
+    } else if (!_spin.isAnimating) {
+      _spin.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _spin.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final track = widget.onGradient ? Colors.white.withValues(alpha: 0.3) : Theme.of(context).colorScheme.outlineVariant;
+    return Semantics(
+      label: MaterialLocalizations.of(context).refreshIndicatorSemanticLabel,
+      child: AnimatedBuilder(
+        animation: _spin,
+        builder: (context, _) => CustomPaint(
+          size: Size.square(widget.size),
+          painter: _RingPainter(pull: 1, spin: _spin.value, done: 0, track: track, arc: widget.onGradient ? Colors.white : null),
+        ),
+      ),
+    );
+  }
 }
 
 /// A short violet glow over a record that a refresh just brought in. It plays when [generation]

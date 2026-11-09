@@ -8,6 +8,8 @@ import '../form/fields.dart';
 import '../form/values.dart';
 import '../l10n/app_localizations.dart';
 import '../meta/defs.dart';
+import '../widgets/snap_sheet.dart';
+import '../widgets/pull_refresh.dart';
 
 /// Port of the web StageQueryView as a bottom sheet: one input per param, Check (dry run), then Run.
 /// Resolves to true when the query ran for real, so the caller can refresh.
@@ -17,12 +19,9 @@ Future<bool> runStageQuery(
   required Map<String, String> params,
 }) async {
   var ran = false;
-  await showModalBottomSheet<void>(
-    useRootNavigator: true,
-    context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
-    useSafeArea: true,
+  await showSnapSheet<void>(
+    context,
+    initial: SnapHeight.half,
     builder: (_) => StageQuerySheet(stageQueryMetaId: stageQueryMetaId, defaults: params, onRan: () => ran = true),
   );
   return ran;
@@ -106,7 +105,7 @@ class _StageQuerySheetState extends ConsumerState<StageQuerySheet> {
     return Padding(
       padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottom),
       child: def.when(
-        loading: () => const SizedBox(height: 160, child: Center(child: CircularProgressIndicator())),
+        loading: () => const SizedBox(height: 160, child: Center(child: RefreshRing())),
         error: (e, _) => Column(mainAxisSize: MainAxisSize.min, children: [
           Text(e is ApiError ? e.message : l.somethingWrong, textAlign: TextAlign.center),
           const SizedBox(height: 12),

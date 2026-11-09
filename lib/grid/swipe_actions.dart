@@ -190,42 +190,71 @@ class _SwipeActionsState extends State<SwipeActions> with TickerProviderStateMix
     });
   }
 
+  /// A round button with its name under it. It grows in as its slot is revealed; armed, the
+  /// destructive one stretches into a pill across the whole revealed width.
   Widget _button(SwipeAction a, double revealed) {
+    const d = 52.0;
     final lift = a.destructive ? _seg(revealed, _openW * 0.6, _openW) * 0.5 + (_armed ? 0.2 : 0) : 0.0;
     return Semantics(
       button: true,
       label: a.label,
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: () => _press(a),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: a.destructive ? null : a.color,
-            gradient: a.destructive ? const LinearGradient(colors: [_redLeft, _redRight]) : null,
-          ),
-          child: ClipRect(
-            child: OverflowBox(
-              maxWidth: _buttonW,
-              minWidth: _buttonW,
-              alignment: _armed && a.destructive ? Alignment.centerRight : Alignment.center,
-              child: SizedBox(
-                width: _buttonW,
-                child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  if (a.destructive)
-                    CustomPaint(size: const Size(28, 28), painter: BinPainter(lid: -lift))
-                  else
-                    Icon(a.icon, color: Colors.white, size: 24),
-                  const SizedBox(height: 4),
-                  Text(
-                    a.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+        child: LayoutBuilder(builder: (context, box) {
+          final room = box.maxWidth - 16;
+          // Only an armed swipe widens the destructive slot past a normal button's width.
+          final stretched = a.destructive && box.maxWidth > _buttonW + 1;
+          final size = stretched ? d : room.clamp(0.0, d);
+          final shadow = (a.destructive ? deleteRed : a.color).withValues(alpha: 0.35);
+          return Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: stretched ? CrossAxisAlignment.end : CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: stretched ? room : size,
+                    height: size,
+                    alignment: stretched ? Alignment.centerRight : Alignment.center,
+                    padding: stretched ? const EdgeInsets.only(right: (d - 28) / 2) : null,
+                    decoration: ShapeDecoration(
+                      shape: const StadiumBorder(),
+                      color: a.destructive ? null : a.color,
+                      gradient: a.destructive ? const LinearGradient(colors: [_redLeft, _redRight]) : null,
+                      shadows: [BoxShadow(color: shadow, blurRadius: 12, offset: const Offset(0, 4))],
+                    ),
+                    child: size < 20
+                        ? null
+                        : a.destructive
+                            ? CustomPaint(size: const Size(28, 28), painter: BinPainter(lid: -lift))
+                            : Icon(a.icon, color: Colors.white, size: 24),
                   ),
-                ]),
+                  const SizedBox(height: 6),
+                  // The name fades in once there is room for it; on the pill it sits under the bin.
+                  Opacity(
+                    opacity: _seg(box.maxWidth, 44, _buttonW),
+                    child: SizedBox(
+                      width: stretched ? d + 24 : math.min(box.maxWidth, _buttonW),
+                      child: Text(
+                        a.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-        ),
+          );
+        }),
       ),
     );
   }

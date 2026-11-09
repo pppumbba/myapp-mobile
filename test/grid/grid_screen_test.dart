@@ -213,7 +213,7 @@ void main() {
     expect(find.text('Complete'), findsOneWidget);
     await tester.tap(find.text('Delete'));
     await tester.pumpAndSettle();
-    expect(find.text('Delete?'), findsOneWidget);
+    expect(find.text('Delete this record?'), findsOneWidget);
     await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
     await tester.pumpAndSettle();
     expect(a.seen.where((o) => o.method == 'DELETE').single.uri.path, '/api/metas/129/data/7');

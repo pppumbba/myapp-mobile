@@ -42,7 +42,7 @@
   "cancel": "Болих",
   "close": "Хаах",
   "delete": "Устгах",
-  "deleteConfirm": "Устгах уу?",
+  "deleteConfirm": "Энэ бичлэгийг устгах уу?",
   "check": "Шалгах",
   "run": "Ажиллуулах",
   "filterFirst": "Эхлээд шүүлтүүр сонгоно уу: {labels}",
@@ -61,5 +61,13 @@
   "or": "эсвэл",
   "continueWithGoogle": "Google-ээр нэвтрэх",
   "showPassword": "Нууц үг харуулах",
-  "hidePassword": "Нууц үг нуух"
+  "hidePassword": "Нууц үг нуух",
+  "noData": "Өгөгдөл алга.",
+  "deleteForGood": "Бүрмөсөн устгагдана.",
+  "justNow": "одоо",
+  "today": "Өнөөдөр",
+  "tomorrow": "Маргааш",
+  "yesterday": "Өчигдөр",
+  "inDays": "{count} хоногийн дараа",
+  "daysAgo": "{count} хоногийн өмнө"
 }

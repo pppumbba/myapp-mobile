@@ -59,7 +59,7 @@
   "cancel": "Cancel",
   "close": "Close",
   "delete": "Delete",
-  "deleteConfirm": "Delete?",
+  "deleteConfirm": "Delete this record?",
   "check": "Check",
   "run": "Run",
   "filterFirst": "Choose a filter first: {labels}",
@@ -99,5 +99,27 @@
   "or": "or",
   "continueWithGoogle": "Continue with Google",
   "showPassword": "Show password",
-  "hidePassword": "Hide password"
+  "hidePassword": "Hide password",
+  "noData": "No data yet.",
+  "deleteForGood": "It will be removed for good.",
+  "justNow": "now",
+  "today": "Today",
+  "tomorrow": "Tomorrow",
+  "yesterday": "Yesterday",
+  "inDays": "In {count} days",
+  "@inDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "daysAgo": "{count} days ago",
+  "@daysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

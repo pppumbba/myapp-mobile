@@ -9,7 +9,9 @@ import '../api/models.dart';
 import '../auth/session.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/inchworm_tabs.dart';
+import '../widgets/pill_buttons.dart';
 import '../meta/defs.dart';
+import '../widgets/pull_refresh.dart';
 import 'errors.dart';
 import 'fields.dart';
 import 'values.dart';
@@ -405,29 +407,30 @@ class _FormScreenState extends ConsumerState<FormScreen> with TickerProviderStat
     final midStep = wizard && step < groups.length - 1;
     final canAdd = _def?.meta.jsonConfig['save_and_add'] != false;
     final buttons = <Widget>[
-      if (wizard && step > 0) OutlinedButton(onPressed: _saving ? null : () => _goTo(step - 1), child: Text(l.back)),
-      const Spacer(),
+      // The confirm dialog's pair: a soft pill for the side step, the gradient pill for the main one.
+      if (wizard && step > 0) SoftButton(onPressed: _saving ? null : () => _goTo(step - 1), child: Text(l.back)),
       if (midStep)
-        FilledButton(onPressed: () => _next(groups), child: Text(l.next))
+        GradientButton(onPressed: () => _next(groups), child: Text(l.next))
       else if (!widget.readOnly) ...[
-        if (canAdd) ...[
-          OutlinedButton(onPressed: _saving ? null : () => _submit(add: true), child: Text(l.saveAndAdd)),
-          const SizedBox(width: 8),
-        ],
-        FilledButton(
+        if (canAdd) SoftButton(onPressed: _saving ? null : () => _submit(add: true), child: Text(l.saveAndAdd)),
+        GradientButton(
           onPressed: _saving ? null : () => _submit(add: false),
-          child: _saving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : Text(l.save),
+          child: _saving
+              ? const RefreshRing(size: 22, onGradient: true)
+              : Text(l.save),
         ),
       ],
     ];
-    if (buttons.length == 1) return null; // only the spacer: a read-only form without steps
+    if (buttons.isEmpty) return null; // a read-only form without steps
     return Material(
       elevation: 3,
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-          child: Row(children: buttons),
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+          child: Row(children: [
+            for (final (i, b) in buttons.indexed) ...[if (i > 0) const SizedBox(width: 12), Expanded(child: b)],
+          ]),
         ),
       ),
     );
@@ -439,7 +442,7 @@ class _FormScreenState extends ConsumerState<FormScreen> with TickerProviderStat
     Widget body;
     Widget? bar;
     if (_loading) {
-      body = const Center(child: CircularProgressIndicator());
+      body = const Center(child: RefreshRing());
     } else if (_loadError != null) {
       body = Center(
         child: Padding(

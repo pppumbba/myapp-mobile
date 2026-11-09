@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 
@@ -11,7 +12,8 @@ class PillDestination {
 
 const pillViolet = Color(0xFF6E5BFF);
 const pillCyan = Color(0xFF38C6FF);
-const _barFill = Color(0xFF1B1A28);
+// See-through, over a blur of whatever scrolls behind the bar.
+const _barFill = Color(0xB81B1A28);
 const _gray = Color(0xFF8C8AA8);
 
 /// Damped spring from 0 to 1, [t] seconds after the tap (0 before it).
@@ -95,7 +97,14 @@ class _PillNavBarState extends State<PillNavBar> with SingleTickerProviderStateM
       padding: EdgeInsets.fromLTRB(16, 4, 16, 12 + bottom),
       child: SizedBox(
         height: 64,
-        child: LayoutBuilder(builder: (context, box) {
+        child: Stack(fit: StackFit.expand, children: [
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18), child: const SizedBox.expand()),
+            ),
+          ),
+          LayoutBuilder(builder: (context, box) {
           final width = box.maxWidth;
           final tab = width / n;
           return AnimatedBuilder(
@@ -128,6 +137,7 @@ class _PillNavBarState extends State<PillNavBar> with SingleTickerProviderStateM
             },
           );
         }),
+        ]),
       ),
     );
   }
@@ -164,13 +174,21 @@ class _BarPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final bar = RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(24));
-    // Soft shadow 6 px down, then the fill and a 1 px inner border.
+    // Soft shadow 6 px down (outside the bar only, so it does not darken the see-through fill),
+    // then the fill and a 1 px inner border.
+    canvas.save();
+    canvas.clipPath(Path.combine(
+      PathOperation.difference,
+      Path()..addRect((Offset.zero & size).inflate(40)),
+      Path()..addRRect(bar),
+    ));
     canvas.drawRRect(
       bar.shift(const Offset(0, 6)),
       Paint()
         ..color = Colors.black.withValues(alpha: 0.45)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9),
     );
+    canvas.restore();
     canvas.drawRRect(bar, Paint()..color = _barFill);
     canvas.drawRRect(
       bar.deflate(0.5),

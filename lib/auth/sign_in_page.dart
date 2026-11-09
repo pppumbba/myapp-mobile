@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/app_localizations.dart';
 import '../nav/pill_bar.dart' show pillCyan, pillViolet;
 import '../widgets/wand_mark.dart';
+import '../widgets/pull_refresh.dart';
 import 'session.dart';
 
 class SplashPage extends ConsumerWidget {
@@ -40,7 +41,7 @@ class SplashPage extends ConsumerWidget {
             : const Column(mainAxisSize: MainAxisSize.min, children: [
                 WandMark(size: 64),
                 SizedBox(height: 28),
-                SizedBox.square(dimension: 24, child: CircularProgressIndicator(strokeWidth: 2.4)),
+                RefreshRing(size: 30),
               ]),
       ),
     );
@@ -165,7 +166,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                       _GradientButton(
                         onPressed: s.loading ? null : _submit,
                         child: s.loading
-                            ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))
+                            ? const RefreshRing(size: 24, onGradient: true)
                             : Text(l.signIn),
                       ),
                       if (google) ...[

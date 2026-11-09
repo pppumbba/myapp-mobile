@@ -11,8 +11,10 @@ import '../widgets/inchworm_tabs.dart';
 import 'icons.dart';
 import 'notifications.dart';
 import 'pill_bar.dart';
+import 'scroll_chrome.dart';
 import 'top_bar.dart';
 import 'menu.dart';
+import '../widgets/snap_sheet.dart';
 
 const maxTabBranches = 5;
 
@@ -136,6 +138,7 @@ class AppShell extends ConsumerWidget {
     final l = AppLocalizations.of(context);
     final menu = ref.watch(mobileMenuProvider);
     final userName = ref.watch(sessionProvider.select((s) => '${s.user?['name'] ?? ''}'));
+    listenForArrivals(context, ref);
     final account = AccountAvatar(name: userName, tooltip: l.account, onPressed: () => showAccountSheet(context, ref));
     // The app's name and mark stay out of the app: the bar holds only the user's tools.
     PreferredSizeWidget bar({Widget? leading, Widget? search}) => AppBar(
@@ -215,8 +218,16 @@ class AppShell extends ConsumerWidget {
           onPopInvokedWithResult: (didPop, _) {
             if (!didPop) navigationShell.goBranch(0);
           },
-          child: Scaffold(
-          appBar: bar(
+          // Scrolling down folds the top bar away; scrolling up (or another tab) brings it back.
+          child: ScrollChrome(
+          resetKey: '$branch ${routeState.uri} ${ref.watch(sectionTabProvider)}',
+          builder: (context, shown) => Scaffold(
+          // Screens run on under the floating tab bar and show through it; they get its height
+          // as bottom padding (MediaQuery), so the last record and the add button stay clear of it.
+          extendBody: true,
+          body: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            SizedBox(height: MediaQuery.paddingOf(context).top),
+            CollapseOnScroll(shown: shown, child: MediaQuery.removePadding(context: context, removeTop: true, child: bar(
             leading: inMoreScreen
                 ? TopBarButton(
                     tooltip: MaterialLocalizations.of(context).backButtonTooltip,
@@ -230,8 +241,18 @@ class AppShell extends ConsumerWidget {
                 builder: (_) => MenuSearchPage(menu: m, onPick: open),
               )),
             ),
-          ),
-          body: branchExists ? navigationShell : const SizedBox.shrink(),
+          ))),
+            Expanded(
+              // The Scaffold's own context, so the tab bar height it adds to the bottom padding is kept.
+              child: Builder(
+                builder: (context) => MediaQuery.removePadding(
+                  context: context,
+                  removeTop: true,
+                  child: branchExists ? navigationShell : const SizedBox.shrink(),
+                ),
+              ),
+            ),
+          ]),
           // The tab bar needs at least two destinations; one screen is shown on its own.
           bottomNavigationBar: destinationCount < 2 ? null : PillNavBar(
             selectedIndex: selected,
@@ -248,7 +269,7 @@ class AppShell extends ConsumerWidget {
               if (hasMore) PillDestination(icon: Icons.more_horiz, label: l.more),
             ],
           ),
-          ),
+          )),
         );
       },
     );
@@ -310,10 +331,9 @@ void showAccountSheet(BuildContext context, WidgetRef ref) {
   final name = '${s.user?['name'] ?? ''}';
   final email = '${s.user?['email'] ?? ''}';
   final customer = s.info?.customerCode;
-  showModalBottomSheet<void>(
-    useRootNavigator: true,
-    context: context,
-    showDragHandle: true,
+  showSnapSheet<void>(
+    context,
+    initial: SnapHeight.peek,
     builder: (ctx) => SafeArea(
       child: Column(
         mainAxisSize: MainAxisSize.min,

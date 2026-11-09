@@ -110,7 +110,9 @@ class _InchwormTabBarState extends State<InchwormTabBar> with SingleTickerProvid
                       Semantics(
                         button: true,
                         selected: i == widget.index,
-                        child: InkWell(
+                        // No splash or highlight: the inchworm moving is the feedback.
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
                           onTap: () => widget.onTap(i),
                           child: SizedBox(
                             width: textW[i] + 2 * _tabPad,

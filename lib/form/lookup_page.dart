@@ -10,6 +10,7 @@ import '../grid/card_slots.dart';
 import '../grid/record_card.dart';
 import '../l10n/app_localizations.dart';
 import '../meta/defs.dart';
+import '../widgets/pull_refresh.dart';
 import 'lookup.dart';
 
 /// Opens the lookup grid full screen; resolves to the tapped row, or null when dismissed.
@@ -132,7 +133,7 @@ class _LookupPageState extends ConsumerState<LookupPage> {
         ),
       );
     } else if (_rows.isEmpty) {
-      body = _loading ? const Center(child: CircularProgressIndicator()) : Center(child: Text(l10n.noResults));
+      body = _loading ? const Center(child: RefreshRing()) : Center(child: Text(l10n.noResults));
     } else {
       body = ListView.builder(
         controller: _scroll,
@@ -144,7 +145,7 @@ class _LookupPageState extends ConsumerState<LookupPage> {
               child: Center(
                 child: _error != null
                     ? TextButton(onPressed: _load, child: Text(l10n.retry))
-                    : const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
+                    : const RefreshRing(size: 28),
               ),
             );
           }

@@ -13,9 +13,11 @@ import '../l10n/app_localizations.dart';
 import '../meta/defs.dart';
 import '../nav/icons.dart';
 import '../nav/pill_bar.dart' show pillViolet;
+import '../nav/scroll_chrome.dart';
 import '../screens/screen_view.dart';
 import '../stage_query/stage_query_sheet.dart';
 import '../widgets/pull_refresh.dart';
+import '../widgets/confirm_dialog.dart';
 import '../widgets/expanding_search.dart';
 import '../widgets/speed_dial.dart';
 import 'card_slots.dart';
@@ -25,6 +27,7 @@ import 'grid_query.dart';
 import 'record_card.dart';
 import 'swipe_actions.dart';
 import 'row_actions.dart';
+import '../widgets/snap_sheet.dart';
 
 /// A datagrid as a list of cards: search, filter sheet with chips, infinite scroll, Add FAB,
 /// row buttons in a bottom sheet. [fixed] values are the grid's scope (always applied) and are
@@ -322,10 +325,9 @@ class _GridScreenState extends ConsumerState<GridScreen> {
   }
 
   Future<void> _rowSheet(Map<String, dynamic> row, List<MetaAction> actions) async {
-    final picked = await showModalBottomSheet<MetaAction>(
-      useRootNavigator: true,
-      context: context,
-      showDragHandle: true,
+    final picked = await showSnapSheet<MetaAction>(
+      context,
+      initial: SnapHeight.peek,
       builder: (ctx) => SafeArea(
         child: ListView(shrinkWrap: true, children: [
           Padding(
@@ -384,17 +386,15 @@ class _GridScreenState extends ConsumerState<GridScreen> {
   /// Asks, then deletes; true when the record is gone. [reload] refreshes the list afterwards.
   Future<bool> _delete(int formMetaId, String id, {bool reload = true}) async {
     final l = AppLocalizations.of(context);
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l.deleteConfirm),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(l.cancel)),
-          FilledButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(l.delete)),
-        ],
-      ),
+    final ok = await showConfirmDialog(
+      context,
+      title: l.deleteConfirm,
+      message: l.deleteForGood,
+      confirmLabel: l.delete,
+      cancelLabel: l.cancel,
+      destructive: true,
     );
-    if (ok != true || !mounted) return false;
+    if (!ok || !mounted) return false;
     try {
       await ref.read(apiClientProvider).delete('/metas/$formMetaId/data/$id');
       if (mounted && reload) _reload();
@@ -467,7 +467,7 @@ class _GridScreenState extends ConsumerState<GridScreen> {
 
     if (def.hasError) return failure(def.error!, () => ref.invalidate(metaDefProvider(widget.metaId)));
     if (acts.hasError) return failure(acts.error!, () => ref.invalidate(actionsProvider(widget.metaId)));
-    if (!def.hasValue || !acts.hasValue) return const Center(child: CircularProgressIndicator());
+    if (!def.hasValue || !acts.hasValue) return const Center(child: RefreshRing());
 
     if (!_started) {
       _started = true;
@@ -489,24 +489,33 @@ class _GridScreenState extends ConsumerState<GridScreen> {
     return Scaffold(
       floatingActionButton: add == null
           ? null
-          : SpeedDialFab(
-              tooltip: add.label ?? l.add,
-              onPressed: () => _add(add),
-              items: !useDial
-                  ? const []
-                  : [
-                      for (final (i, a) in dial.indexed)
-                        SpeedDialItem(
-                          icon: a.action == 'add' ? (a.iconCls == null ? Icons.note_add_outlined : menuIcon(a.iconCls)) : _actionIcon(a),
-                          label: a.label ?? a.action ?? '',
-                          color: speedDialColors[i % speedDialColors.length],
-                          onTap: () => a.action == 'add' ? _add(a) : _run(a, null),
-                        ),
-                    ],
-            ),
+          // Lifted over the tab bar that the screen runs on under (the Scaffold places it by the
+          // safe area only, not by the bar height the shell adds to the bottom padding).
+          : Padding(
+              padding: EdgeInsets.only(
+                  bottom: (MediaQuery.paddingOf(context).bottom - MediaQuery.viewPaddingOf(context).bottom).clamp(0.0, double.infinity)),
+              child: SpeedDialFab(
+                  tooltip: add.label ?? l.add,
+                  onPressed: () => _add(add),
+                  items: !useDial
+                      ? const []
+                      : [
+                          for (final (i, a) in dial.indexed)
+                            SpeedDialItem(
+                              icon: a.action == 'add' ? (a.iconCls == null ? Icons.note_add_outlined : menuIcon(a.iconCls)) : _actionIcon(a),
+                              label: a.label ?? a.action ?? '',
+                              color: speedDialColors[i % speedDialColors.length],
+                              onTap: () => a.action == 'add' ? _add(a) : _run(a, null),
+                            ),
+                        ],
+                )),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Search, filters and totals fold away with the top bar while scrolling down.
+          CollapseOnScroll(
+            shown: ScrollChrome.maybeOf(context),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 4, 4),
             child: Row(children: [
@@ -527,7 +536,8 @@ class _GridScreenState extends ConsumerState<GridScreen> {
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
               child: Text(f, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall),
             ),
-          if (_loading) const LinearProgressIndicator(minHeight: 2) else const SizedBox(height: 2),
+            ]),
+          ),
           Expanded(child: _list(l, slots, all, rowActs)),
         ],
       ),
@@ -624,6 +634,7 @@ class _GridScreenState extends ConsumerState<GridScreen> {
   Widget _list(AppLocalizations l, CardSlots slots, List<MetaAction> all, List<MetaAction> rowActs) {
     Widget scrollable(Widget child) => PullRefresh(
           onRefresh: _pullReload,
+          loading: _loading,
           child: LayoutBuilder(
             builder: (_, c) => SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -648,17 +659,18 @@ class _GridScreenState extends ConsumerState<GridScreen> {
     final more = _q.page < _lastPage || _loadingMore || _error != null;
     return PullRefresh(
       onRefresh: _pullReload,
+      loading: _loading,
       child: ListView.builder(
         controller: _scroll,
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(top: 4, bottom: 88),
+        padding: EdgeInsets.only(top: 4, bottom: 88 + MediaQuery.paddingOf(context).bottom),
         itemCount: _rows.length + (more ? 1 : 0),
         itemBuilder: (_, i) {
           if (i == _rows.length) {
             if (_error != null) {
               return _Message(text: _error!.message, action: FilledButton(onPressed: _loadMore, child: Text(l.retry)));
             }
-            return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
+            return const Padding(padding: EdgeInsets.all(16), child: Center(child: RefreshRing(size: 28)));
           }
           final row = _rows[i];
           final id = row[primaryKey(_params)];

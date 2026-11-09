@@ -9,6 +9,7 @@ import '../form/values.dart';
 import '../l10n/app_localizations.dart';
 import 'cells.dart';
 import 'grid_query.dart';
+import '../widgets/snap_sheet.dart';
 
 /// A filter's choices: options, Yes/No for booleans, else null (lookups use facet values).
 List<({String id, String label})>? _choices(MetaParam fp, AppLocalizations l) {
@@ -38,12 +39,9 @@ Future<Map<String, String>?> showFilterSheet(
   required Map<String, String> values,
   Map<String, dynamic> query = const {},
 }) =>
-    showModalBottomSheet<Map<String, String>>(
-      useRootNavigator: true,
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      useSafeArea: true,
+    showSnapSheet<Map<String, String>>(
+      context,
+      initial: SnapHeight.half,
       builder: (_) => FilterSheet(gridMetaId: gridMetaId, filters: filters, values: values, query: query),
     );
 

@@ -143,7 +143,7 @@ class AppLocalizationsMn extends AppLocalizations {
   String get delete => 'Устгах';
 
   @override
-  String get deleteConfirm => 'Устгах уу?';
+  String get deleteConfirm => 'Энэ бичлэгийг устгах уу?';
 
   @override
   String get check => 'Шалгах';
@@ -207,4 +207,32 @@ class AppLocalizationsMn extends AppLocalizations {
 
   @override
   String get hidePassword => 'Нууц үг нуух';
+
+  @override
+  String get noData => 'Өгөгдөл алга.';
+
+  @override
+  String get deleteForGood => 'Бүрмөсөн устгагдана.';
+
+  @override
+  String get justNow => 'одоо';
+
+  @override
+  String get today => 'Өнөөдөр';
+
+  @override
+  String get tomorrow => 'Маргааш';
+
+  @override
+  String get yesterday => 'Өчигдөр';
+
+  @override
+  String inDays(int count) {
+    return '$count хоногийн дараа';
+  }
+
+  @override
+  String daysAgo(int count) {
+    return '$count хоногийн өмнө';
+  }
 }
