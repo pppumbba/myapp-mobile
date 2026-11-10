@@ -45,7 +45,8 @@ class DropPose {
 
 /// Shows a notification that drips out of the top of the screen as a liquid drop and spreads
 /// into a toast. [onTap] runs (and the toast leaves) when it is tapped. Only one at a time.
-void showDropToast(BuildContext context, {required String title, String? body, required String time, VoidCallback? onTap}) {
+/// [icon] goes in the white disc in place of the title's initial (a confirmation rather than a message).
+void showDropToast(BuildContext context, {required String title, String? body, String time = '', IconData? icon, VoidCallback? onTap}) {
   _current?.remove();
   final overlay = Overlay.of(context, rootOverlay: true);
   late OverlayEntry entry;
@@ -54,6 +55,7 @@ void showDropToast(BuildContext context, {required String title, String? body, r
       title: title,
       body: body,
       time: time,
+      icon: icon,
       onTap: onTap,
       onDone: () {
         if (_current == entry) _current = null;
@@ -71,9 +73,10 @@ class DropToast extends StatefulWidget {
   final String title, time;
   final String? body;
   final VoidCallback? onTap;
+  final IconData? icon;
   final VoidCallback onDone;
   final double hold;
-  const DropToast({super.key, required this.title, this.body, required this.time, this.onTap, required this.onDone, this.hold = 4.5});
+  const DropToast({super.key, required this.title, this.body, this.time = '', this.icon, this.onTap, required this.onDone, this.hold = 4.5});
 
   @override
   State<DropToast> createState() => _DropToastState();
@@ -182,7 +185,9 @@ class _DropToastState extends State<DropToast> with SingleTickerProviderStateMix
                       height: 40,
                       alignment: Alignment.center,
                       decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                      child: Text(initial, style: const TextStyle(color: pillViolet, fontSize: 19, fontWeight: FontWeight.w700)),
+                      child: widget.icon != null
+                          ? Icon(widget.icon, color: pillViolet, size: 24)
+                          : Text(initial, style: const TextStyle(color: pillViolet, fontSize: 19, fontWeight: FontWeight.w700)),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -195,7 +200,8 @@ class _DropToastState extends State<DropToast> with SingleTickerProviderStateMix
                       ]),
                     ),
                     const SizedBox(width: 8),
-                    Text(widget.time, style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13, fontWeight: FontWeight.w600)),
+                    if (widget.time.isNotEmpty)
+                      Text(widget.time, style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13, fontWeight: FontWeight.w600)),
                   ]),
                 ),
               ),

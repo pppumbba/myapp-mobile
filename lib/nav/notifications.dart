@@ -7,11 +7,11 @@ import '../api/client.dart';
 import '../auth/session.dart';
 import '../l10n/app_localizations.dart';
 import '../meta/defs.dart' show noRetry;
-import 'pill_bar.dart' show pillCyan, pillViolet;
-import 'top_bar.dart';
+import 'pill_bar.dart' show pillViolet;
+import '../chat/inbox.dart' show openInbox;
 import '../widgets/drop_toast.dart';
-import '../widgets/snap_sheet.dart';
-import '../widgets/pull_refresh.dart';
+import '../widgets/edge_fade.dart';
+import '../widgets/skeleton.dart';
 
 /// One of the signed-in user's notifications (user_notifications).
 class AppNotification {
@@ -39,7 +39,7 @@ class NotificationPage {
 
 /// The latest 20 notifications and the unread count, fetched again every minute while signed in.
 final notificationsProvider = FutureProvider<NotificationPage>(retry: noRetry, (ref) async {
-  ref.watch(sessionProvider.select((s) => s.user?['id']));
+  ref.watch(sessionScopeProvider);
   final timer = Timer(const Duration(minutes: 1), ref.invalidateSelf);
   ref.onDispose(timer.cancel);
   final r = await ref.read(apiClientProvider).get<dynamic>('/notifications');
@@ -49,12 +49,6 @@ final notificationsProvider = FutureProvider<NotificationPage>(retry: noRetry, (
     r is Map && r['unread'] is num ? (r['unread'] as num).toInt() : 0,
   );
 });
-
-/// Refreshes the list and opens it in a sheet.
-void openNotifications(BuildContext context, WidgetRef ref) {
-  ref.invalidate(notificationsProvider);
-  showSnapSheet<void>(context, initial: SnapHeight.half, builder: (_) => const NotificationSheet());
-}
 
 /// The newest notification that arrived between two reads of the list: unread and newer than
 /// anything [prev] held. Null on the first read, so old unread ones never pop up.
@@ -76,34 +70,14 @@ void listenForArrivals(BuildContext context, WidgetRef ref) {
       title: n.title,
       body: n.body,
       time: AppLocalizations.of(context).justNow,
-      onTap: () => openNotifications(context, ref),
+      onTap: () => openInbox(context, ref),
     );
   });
 }
 
-/// The bell in the top bar, with the unread count.
-class NotificationBell extends ConsumerWidget {
-  const NotificationBell({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final unread = ref.watch(notificationsProvider).value?.unread ?? 0;
-    return TopBarButton(
-      tooltip: AppLocalizations.of(context).notifications,
-      onPressed: () => openNotifications(context, ref),
-      child: Badge(
-        isLabelVisible: unread > 0,
-        backgroundColor: pillCyan,
-        textColor: const Color(0xFF0B1020),
-        label: Text(unread > 99 ? '99+' : '$unread', style: const TextStyle(fontWeight: FontWeight.w700)),
-        child: Icon(unread > 0 ? Icons.notifications_active_outlined : Icons.notifications_none, size: 22),
-      ),
-    );
-  }
-}
-
-class NotificationSheet extends ConsumerWidget {
-  const NotificationSheet({super.key});
+/// The Notifications tab of the inbox: the list, with Mark all read over it while any are unread.
+class NotificationList extends ConsumerWidget {
+  const NotificationList({super.key});
 
   Future<void> _write(WidgetRef ref, String path) async {
     try {
@@ -120,49 +94,46 @@ class NotificationSheet extends ConsumerWidget {
     final theme = Theme.of(context);
     final page = ref.watch(notificationsProvider);
     final unread = page.value?.unread ?? 0;
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.75),
-      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 8, 8),
-          child: Row(children: [
-            Expanded(child: Text(l.notifications, style: theme.textTheme.titleLarge)),
-            if (unread > 0) TextButton(onPressed: () => _write(ref, '/notifications/read-all'), child: Text(l.markAllRead)),
-          ]),
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      if (unread > 0)
+        Align(
+          alignment: Alignment.centerRight,
+          child: Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: TextButton(onPressed: () => _write(ref, '/notifications/read-all'), child: Text(l.markAllRead)),
+          ),
         ),
-        Flexible(
-          child: switch (page) {
-            AsyncValue(:final value?) when value.items.isNotEmpty => ListView.separated(
-                shrinkWrap: true,
-                padding: const EdgeInsets.only(bottom: 16),
-                itemCount: value.items.length,
-                separatorBuilder: (_, _) => const Divider(height: 1, indent: 20, endIndent: 20),
-                itemBuilder: (_, i) {
-                  final n = value.items[i];
-                  return ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-                    leading: Icon(n.read ? Icons.notifications_none : Icons.notifications_active_outlined,
-                        color: n.read ? theme.colorScheme.onSurfaceVariant : pillViolet),
-                    title: Text(n.title, style: n.read ? null : const TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: n.body == null || n.body!.isEmpty ? null : Text(n.body!, maxLines: 3, overflow: TextOverflow.ellipsis),
-                    trailing: n.createdAt == null ? null : Text(_ago(n.createdAt!, l), style: theme.textTheme.bodySmall),
-                    onTap: n.read ? null : () => _write(ref, '/notifications/${n.id}/read'),
-                  );
-                },
-              ),
-            AsyncValue(:final value?) when value.items.isEmpty => Padding(
-                padding: const EdgeInsets.all(32),
-                child: Text(l.noNotifications, textAlign: TextAlign.center),
-              ),
-            AsyncValue(:final error?) => Padding(
-                padding: const EdgeInsets.all(32),
-                child: Text(error is ApiError ? error.message : l.somethingWrong, textAlign: TextAlign.center),
-              ),
-            _ => const Padding(padding: EdgeInsets.all(32), child: Center(child: RefreshRing())),
-          },
-        ),
-      ]),
-    );
+      Expanded(
+        child: switch (page) {
+          AsyncValue(:final value?) when value.items.isNotEmpty => ListView.separated(
+              padding: EdgeInsets.only(bottom: 16 + MediaQuery.paddingOf(context).bottom),
+              itemCount: value.items.length,
+              separatorBuilder: (_, _) => const Divider(height: 1, indent: 20, endIndent: 20),
+              itemBuilder: (_, i) {
+                final n = value.items[i];
+                return EdgeFade(child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+                  leading: Icon(n.read ? Icons.notifications_none : Icons.notifications_active_outlined,
+                      color: n.read ? theme.colorScheme.onSurfaceVariant : pillViolet),
+                  title: Text(n.title, style: n.read ? null : const TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: n.body == null || n.body!.isEmpty ? null : Text(n.body!, maxLines: 3, overflow: TextOverflow.ellipsis),
+                  trailing: n.createdAt == null ? null : Text(_ago(n.createdAt!, l), style: theme.textTheme.bodySmall),
+                  onTap: n.read ? null : () => _write(ref, '/notifications/${n.id}/read'),
+                ));
+              },
+            ),
+          AsyncValue(:final value?) when value.items.isEmpty => Padding(
+              padding: const EdgeInsets.all(32),
+              child: Text(l.noNotifications, textAlign: TextAlign.center),
+            ),
+          AsyncValue(:final error?) => Padding(
+              padding: const EdgeInsets.all(32),
+              child: Text(error is ApiError ? error.message : l.somethingWrong, textAlign: TextAlign.center),
+            ),
+          _ => const Padding(padding: EdgeInsets.fromLTRB(16, 8, 16, 24), child: Shimmer(child: RowGroupSkeleton(rows: 4))),
+        },
+      ),
+    ]);
   }
 
   static String _ago(DateTime t, AppLocalizations l) {

@@ -4,9 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../nav/pill_bar.dart' show springAt;
+import '../widgets/bin_icon.dart';
 
 const deleteRed = Color(0xFFF2475E);
-const _redLeft = Color(0xFFFF6A78), _redRight = Color(0xFFD93160);
+const _redLeft = binRedLeft, _redRight = binRedRight;
 
 /// One button behind a swiped card. The [destructive] one goes last (outermost), turns red with
 /// a bin, and a long swipe presses it. [onPressed] resolves to true when the record is gone.
@@ -260,49 +261,3 @@ class _SwipeActionsState extends State<SwipeActions> with TickerProviderStateMix
   }
 }
 
-/// A white bin whose lid tilts open by [lid] radians (negative lifts the right side).
-class BinPainter extends CustomPainter {
-  final double lid;
-  BinPainter({required this.lid});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final s = size.width;
-    final p = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.4
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    canvas.save();
-    canvas.translate(size.width / 2, size.height / 2 + s * 0.06);
-    canvas.drawPath(
-      Path()
-        ..moveTo(-0.32 * s, -0.16 * s)
-        ..lineTo(-0.25 * s, 0.44 * s)
-        ..lineTo(0.25 * s, 0.44 * s)
-        ..lineTo(0.32 * s, -0.16 * s)
-        ..moveTo(-0.08 * s, -0.02 * s)
-        ..lineTo(-0.06 * s, 0.3 * s)
-        ..moveTo(0.08 * s, -0.02 * s)
-        ..lineTo(0.06 * s, 0.3 * s),
-      p,
-    );
-    canvas.translate(-0.42 * s, -0.28 * s);
-    canvas.rotate(lid);
-    canvas.drawPath(
-      Path()
-        ..moveTo(0, 0)
-        ..lineTo(0.84 * s, 0)
-        ..moveTo(0.28 * s, 0)
-        ..lineTo(0.30 * s, -0.16 * s)
-        ..lineTo(0.54 * s, -0.16 * s)
-        ..lineTo(0.56 * s, 0),
-      p,
-    );
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(BinPainter old) => old.lid != lid;
-}

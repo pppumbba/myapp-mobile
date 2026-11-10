@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 
+import 'tones.dart';
+
 /// The three heights a [showSnapSheet] rests at.
 enum SnapHeight { peek, half, full }
 
@@ -172,9 +174,9 @@ class _SnapSheetState extends State<_SnapSheet> with SingleTickerProviderStateMi
     return Material(
       color: scheme.surfaceContainer,
       elevation: 16,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        side: BorderSide(color: Color(0x12FFFFFF), width: 1.5),
+      shape: RoundedRectangleBorder(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        side: BorderSide(color: scheme.hairline, width: 1.5),
       ),
       clipBehavior: Clip.antiAlias,
       shadowColor: Colors.black,

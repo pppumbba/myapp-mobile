@@ -324,6 +324,58 @@ class SessionController extends Notifier<SessionState> {
     state = SessionState(info: state.info);
   }
 
+  /// Puts the fields a profile call answered with onto the user (those answers leave out the
+  /// customer and the customer list, which stay as they were).
+  void _mergeUser(Map<String, dynamic> changed) {
+    final user = state.user;
+    if (user == null) return;
+    state = SessionState(info: state.info, user: {...user, ...changed}, access: state.access, sessionValues: state.sessionValues);
+  }
+
+  /// PUT /user {name, email}; field errors come back on the thrown [ApiError].
+  Future<void> updateProfile(String name, String email) async {
+    final u = await _client.put<dynamic>('/user', {'name': name, 'email': email});
+    _mergeUser(Map<String, dynamic>.from(u as Map));
+  }
+
+  /// PUT /user/password; signs the user out everywhere else, this token stays.
+  Future<void> changePassword(String current, String next, String confirm) => _client.put<dynamic>('/user/password', {
+        'current_password': current,
+        'password': next,
+        'password_confirmation': confirm,
+      });
+
+  /// Light, dark or as the phone is (null). Shown at once; put back if the save fails.
+  /// The user's theme meta goes along unchanged (the backend sets both together).
+  Future<void> setThemeMode(String? mode) async {
+    final before = state.user?['theme_mode'];
+    _mergeUser({'theme_mode': mode});
+    try {
+      await _client.put<dynamic>('/user/theme', {'mode': mode, 'theme_meta_id': state.user?['theme_meta_id']});
+    } catch (_) {
+      _mergeUser({'theme_mode': before});
+      rethrow;
+    }
+  }
+
+  /// The user's language (null: as the phone is). Screens load again in it (see [sessionScopeProvider]).
+  Future<void> setLocale(String? code) async {
+    final u = Map<String, dynamic>.from(await _client.put<dynamic>('/user/locale', {'locale': code}) as Map);
+    final loc = u['locale'];
+    _client.locale = loc is String && loc.isNotEmpty ? loc : null;
+    _mergeUser(u);
+  }
+
+  /// Opens another of the user's customers, as the web's customer switch does: a token bound to
+  /// it replaces this one, then the user, access and menus load again from there.
+  Future<void> switchCustomer(int id) async {
+    final u = await _client.post<Map<String, dynamic>>('/customers/$id/use', null);
+    final token = u['token'] as String;
+    _client.token = token;
+    await _storage.write(token);
+    await loadUser();
+  }
+
   bool can(int? metaId, String ability) => state.access?.can(metaId, ability) ?? false;
 
   String? sessionValue(String path) {
@@ -333,3 +385,10 @@ class SessionController extends Notifier<SessionState> {
 }
 
 final sessionProvider = NotifierProvider<SessionController, SessionState>(SessionController.new);
+
+/// Who is asking, in which customer and language: data cached from the server lives until one of
+/// them changes (sign-out, another customer opened, another language picked).
+final sessionScopeProvider = Provider<Object?>((ref) => ref.watch(sessionProvider.select((s) {
+      final customer = s.user?['customer'];
+      return (s.user?['id'], customer is Map ? customer['id'] : null, s.user?['locale']);
+    })));

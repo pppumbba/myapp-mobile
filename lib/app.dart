@@ -9,6 +9,7 @@ import 'l10n/app_localizations.dart';
 import 'nav/pill_bar.dart' show pillCyan;
 import 'nav/shell.dart';
 import 'widgets/swipe_back.dart';
+import 'widgets/tones.dart' show appFont;
 
 
 /// Signed in: off the splash and sign-in pages. Otherwise the splash while the app info loads or a
@@ -75,10 +76,14 @@ class _WandAppState extends ConsumerState<WandApp> {
   Widget build(BuildContext context) {
     final s = ref.watch(sessionProvider);
     final loc = s.user?['locale'];
+    final seed = s.info?.seed ?? defaultAppColor;
     return MaterialApp.router(
       routerConfig: ref.watch(routerProvider),
       onGenerateTitle: (_) => s.info?.name ?? '',
-      theme: appTheme(s.info?.seed ?? defaultAppColor),
+      theme: appTheme(seed, brightness: Brightness.light),
+      darkTheme: appTheme(seed),
+      // The user's pick (web profile or the account sheet); none follows the phone.
+      themeMode: switch (s.user?['theme_mode']) { 'light' => ThemeMode.light, 'dark' => ThemeMode.dark, _ => ThemeMode.system },
       locale: loc is String && ['en', 'mn'].contains(loc) ? Locale(loc) : null,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: const [
@@ -92,21 +97,29 @@ class _WandAppState extends ConsumerState<WandApp> {
 }
 
 /// Dark, in the bottom menu's colours: the page a shade deeper than the menu, cards in the menu's own tone.
-ThemeData appTheme(Color seed) {
-  const page = Color(0xFF13131C), card = Color(0xFF1B1A28);
-  final scheme = ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark).copyWith(
+/// Light: the same layout on a pale grey page with white cards, the violet and cyan kept.
+ThemeData appTheme(Color seed, {Brightness brightness = Brightness.dark}) {
+  final dark = brightness == Brightness.dark;
+  final page = dark ? const Color(0xFF13131C) : const Color(0xFFF4F4F9);
+  final card = dark ? const Color(0xFF1B1A28) : Colors.white;
+  final label = dark ? const Color(0xFF9D9BBB) : const Color(0xFF6B6985);
+  final helper = dark ? const Color(0xFF77758F) : const Color(0xFF85839C);
+  // Cyan is too pale for text on white: a deeper blue there.
+  final accent = dark ? pillCyan : const Color(0xFF0B86C8);
+  final scheme = ColorScheme.fromSeed(seedColor: seed, brightness: brightness).copyWith(
     surface: page,
-    surfaceContainerLowest: const Color(0xFF0E0E15),
+    surfaceContainerLowest: dark ? const Color(0xFF0E0E15) : Colors.white,
     surfaceContainerLow: card,
-    surfaceContainer: const Color(0xFF1F1E2E),
-    surfaceContainerHigh: const Color(0xFF24223A),
-    surfaceContainerHighest: const Color(0xFF2C2A42),
-    onSurface: const Color(0xFFF4F4F8),
-    onSurfaceVariant: const Color(0xFFA9A7C4),
-    outlineVariant: const Color(0x14FFFFFF),
+    surfaceContainer: dark ? const Color(0xFF1F1E2E) : const Color(0xFFEDEDF4),
+    surfaceContainerHigh: dark ? const Color(0xFF24223A) : Colors.white,
+    surfaceContainerHighest: dark ? const Color(0xFF2C2A42) : const Color(0xFFE4E3EE),
+    onSurface: dark ? const Color(0xFFF4F4F8) : const Color(0xFF17161F),
+    onSurfaceVariant: dark ? const Color(0xFFA9A7C4) : const Color(0xFF63617C),
+    outlineVariant: dark ? const Color(0x14FFFFFF) : const Color(0x1A000000),
   );
   return ThemeData(
     useMaterial3: true,
+    fontFamily: appFont,
     colorScheme: scheme,
     scaffoldBackgroundColor: page,
     // Pages slide in from the right and are dragged back from their left edge.
@@ -114,25 +127,29 @@ ThemeData appTheme(Color seed) {
       TargetPlatform.android: SwipeBackTransitionsBuilder(),
       TargetPlatform.iOS: SwipeBackTransitionsBuilder(),
     }),
-    appBarTheme: const AppBarTheme(backgroundColor: page, surfaceTintColor: Colors.transparent),
+    // Page names sit in the middle on every platform (Android puts them left by default).
+    appBarTheme: AppBarTheme(backgroundColor: page, surfaceTintColor: Colors.transparent, centerTitle: true),
     // Field labels turn cyan on focus (the glowing outline itself is set on form fields: fieldBorders).
     inputDecorationTheme: InputDecorationTheme(
-      labelStyle: const TextStyle(color: Color(0xFF9D9BBB), fontWeight: FontWeight.w600),
+      labelStyle: TextStyle(color: label, fontWeight: FontWeight.w600),
       floatingLabelStyle: WidgetStateTextStyle.resolveWith((states) => TextStyle(
             fontWeight: FontWeight.w600,
             color: states.contains(WidgetState.error)
                 ? scheme.error
                 : states.contains(WidgetState.focused)
-                    ? pillCyan
-                    : const Color(0xFF9D9BBB),
+                    ? accent
+                    : label,
           )),
-      helperStyle: const TextStyle(color: Color(0xFF77758F), fontWeight: FontWeight.w500),
+      helperStyle: TextStyle(color: helper, fontWeight: FontWeight.w500),
     ),
-    textSelectionTheme: TextSelectionThemeData(cursorColor: pillCyan, selectionColor: pillCyan.withValues(alpha: 0.3), selectionHandleColor: pillCyan),
+    textSelectionTheme: TextSelectionThemeData(cursorColor: accent, selectionColor: accent.withValues(alpha: 0.3), selectionHandleColor: accent),
     cardTheme: CardThemeData(
       color: card,
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: Color(0x0FFFFFFF))),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: dark ? const Color(0x0FFFFFFF) : const Color(0x14000000)),
+      ),
     ),
   );
 }

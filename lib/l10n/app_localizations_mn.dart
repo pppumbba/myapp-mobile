@@ -221,6 +221,9 @@ class AppLocalizationsMn extends AppLocalizations {
   String get today => 'Өнөөдөр';
 
   @override
+  String get now => 'Одоо';
+
+  @override
   String get tomorrow => 'Маргааш';
 
   @override
@@ -235,4 +238,245 @@ class AppLocalizationsMn extends AppLocalizations {
   String daysAgo(int count) {
     return '$count хоногийн өмнө';
   }
+
+  @override
+  String get personalInfo => 'Хувийн мэдээлэл';
+
+  @override
+  String get personalInfoNote =>
+      'Апп дотор та хэрхэн харагдах, нэвтэрдэг и-мэйл.';
+
+  @override
+  String get name => 'Нэр';
+
+  @override
+  String get saveChanges => 'Өөрчлөлтийг хадгалах';
+
+  @override
+  String get appearance => 'Харагдах байдал';
+
+  @override
+  String get themeSystem => 'Систем';
+
+  @override
+  String get themeLight => 'Цайвар';
+
+  @override
+  String get themeDark => 'Бараан';
+
+  @override
+  String get language => 'Хэл';
+
+  @override
+  String get languageNote =>
+      'Дэлгэцийн нэр, талбарын нэр, товч, төлвүүдийн хэл (орчуулагдсан бол).';
+
+  @override
+  String get languageAsPhone => 'Утасныхаараа';
+
+  @override
+  String get customers => 'Харилцагчид';
+
+  @override
+  String get customersNote =>
+      'Таны ажилладаг компаниуд. Тус бүр өөрийн апп, хүмүүс, өгөгдөлтэй.';
+
+  @override
+  String get openNow => 'Одоо нээлттэй';
+
+  @override
+  String get admin => 'Админ';
+
+  @override
+  String get currentPassword => 'Одоогийн нууц үг';
+
+  @override
+  String get newPassword => 'Шинэ нууц үг';
+
+  @override
+  String get confirmPassword => 'Шинэ нууц үгээ давтах';
+
+  @override
+  String get passwordHint => 'Дор хаяж 8 тэмдэгт.';
+
+  @override
+  String get passwordsDontMatch => 'Нууц үгнүүд таарахгүй байна.';
+
+  @override
+  String get changePassword => 'Нууц үг солих';
+
+  @override
+  String get passwordChanged => 'Нууц үг солигдлоо';
+
+  @override
+  String get passwordNote =>
+      'Солих нь бусад бүх газраас таныг гаргана; энд нэвтэрсэн хэвээр үлдэнэ.';
+
+  @override
+  String get choose => 'Сонгох';
+
+  @override
+  String get edit => 'Засах';
+
+  @override
+  String get addLine => 'Мөр нэмэх';
+
+  @override
+  String get noLines => 'Мөр алга';
+
+  @override
+  String get total => 'Нийт';
+
+  @override
+  String get removeLine => 'Энэ мөрийг устгах уу?';
+
+  @override
+  String newLine(String name) {
+    return 'Шинэ: $name';
+  }
+
+  @override
+  String get done => 'Болсон';
+
+  @override
+  String addPicked(int count) {
+    return '$count нэмэх';
+  }
+
+  @override
+  String pickToWorkOn(String name) {
+    return 'Ажиллах $name сонгоно уу';
+  }
+
+  @override
+  String get recordNotLoaded => 'Энэ бичлэгийг ачаалж чадсангүй.';
+
+  @override
+  String get workspaceNoSections => 'Энэ ажлын талбарт хэсэг алга.';
+
+  @override
+  String get workspaceNeedsForm =>
+      'Энэ ажлын талбарт бичлэгийн маягт хэрэгтэй.';
+
+  @override
+  String get fieldEnter => 'Оруулах';
+
+  @override
+  String get inbox => 'Ирсэн';
+
+  @override
+  String get chats => 'Чат';
+
+  @override
+  String get newChat => 'Шинэ чат';
+
+  @override
+  String get noChats => 'Чат алга. + дарж эхлүүлнэ үү.';
+
+  @override
+  String get messageHint => 'Зурвас';
+
+  @override
+  String get seen => 'Үзсэн';
+
+  @override
+  String get typingNow => 'бичиж байна…';
+
+  @override
+  String get you => 'Та';
+
+  @override
+  String get findPeople => 'Хүн хайх';
+
+  @override
+  String get sendFailed => 'Илгээж чадсангүй. Дахин оролдоно уу.';
+
+  @override
+  String get send => 'Илгээх';
+
+  @override
+  String get delivered => 'Хүргэсэн';
+
+  @override
+  String get noPeople => 'Өөр хүн алга байна.';
+
+  @override
+  String get noConnection => 'Холболт алга';
+
+  @override
+  String get couldNotLoad => 'Ачаалж чадсангүй';
+
+  @override
+  String get addFile => 'Нэмэх';
+
+  @override
+  String get replaceFile => 'Солих';
+
+  @override
+  String get removeFile => 'Файл хасах';
+
+  @override
+  String get noFiles => 'Файл алга';
+
+  @override
+  String get takePhoto => 'Зураг авах';
+
+  @override
+  String get photoLibrary => 'Зургийн сан';
+
+  @override
+  String get browseFiles => 'Файл сонгох';
+
+  @override
+  String upTo(String size) {
+    return '$size хүртэл';
+  }
+
+  @override
+  String fileTypeNotAllowed(String name, String types) {
+    return '$name-г энд нэмэх боломжгүй. Зөвшөөрөгдсөн: $types';
+  }
+
+  @override
+  String fileTooBig(String name, String size) {
+    return '$name хэт том байна. Дээд хэмжээ $size.';
+  }
+
+  @override
+  String fileLimit(int count) {
+    return 'Энэ талбарт хамгийн ихдээ $count файл нэмнэ.';
+  }
+
+  @override
+  String get couldNotPick =>
+      'Файлыг авч чадсангүй. Аппын зураг, файлын зөвшөөрлийг шалгана уу.';
+
+  @override
+  String get noAppToOpen => 'Энэ төрлийн файлыг нээх апп утсанд алга.';
+
+  @override
+  String get filesUploading => 'Файлууд хуулагдаж дуустал хүлээнэ үү.';
+
+  @override
+  String get shareToChat => 'Чатад хуваалцах';
+
+  @override
+  String get addNote => 'Тайлбар нэмэх (заавал биш)';
+
+  @override
+  String get people => 'Хүмүүс';
+
+  @override
+  String sharedWith(String name) {
+    return '$name-д илгээлээ';
+  }
+
+  @override
+  String noPeopleFound(String query) {
+    return '“$query” гэх хүн олдсонгүй.';
+  }
+
+  @override
+  String get dragPickHint =>
+      'Зөвлөмж: картыг удаан дараад гулсуулж олныг сонгоно';
 }

@@ -9,8 +9,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wand_mobile/api/client.dart';
 import 'package:wand_mobile/auth/session.dart';
 import 'package:wand_mobile/config.dart';
+import 'package:wand_mobile/form/fields.dart';
 import 'package:wand_mobile/form/form_screen.dart';
 import 'package:wand_mobile/l10n/app_localizations.dart';
+
+/// A form row's text box, found by the row's label.
+Finder fieldBox(String label) => find.descendant(of: find.widgetWithText(FieldInput, label), matching: find.byType(TextField));
 
 typedef Handler = (int, Object?) Function(RequestOptions o);
 
@@ -90,6 +94,15 @@ Map<String, Handler> workOrderRoutes({Map<String, dynamic>? posted}) => {
         posted?.addAll(Map<String, dynamic>.from(o.data as Map));
         return (201, {'id': 77, 'wo_no': 'WO-2611-0001'});
       },
+      // The parts line form.
+      'GET /api/metas/130': (_) => (200, {'id': 130, 'type': 'form', 'name': 'Part used'}),
+      'GET /api/metas/130/params': (_) => (200, [
+            p(1, 'id', 'Id', 'integer', primary: true, show: false),
+            p(2, 'work_order_id', 'Work order', 'integer'),
+            p(3, 'part', 'Part', 'string', required: true),
+            p(4, 'quantity', 'Quantity', 'decimal', def: '1'),
+            p(5, 'unit_cost', 'Unit cost', 'decimal'),
+          ]),
       'GET /api/metas/127': (_) => (200, {'id': 127, 'type': 'datagrid', 'name': 'Assets'}),
       'GET /api/metas/127/params': (_) => (200, [
             {'id': 1, 'param_name': 'name', 'field_path': 'name', 'label_name': 'Name', 'is_label': true, 'order_number': 1},
@@ -135,7 +148,8 @@ void main() {
     expect(find.text('Work order'), findsWidgets);
     expect(find.text('Reported by'), findsOneWidget);
     expect(find.text('PM plan'), findsNothing);
-    expect(find.text('Parts'), findsNothing);
+    expect(find.text('Parts'), findsOneWidget); // its lines, as a section
+    expect(find.text('No lines yet'), findsOneWidget);
     expect(find.text('Corrective'), findsOneWidget);
     expect(find.text('Medium'), findsOneWidget);
     expect(find.text(today()), findsOneWidget);
@@ -150,11 +164,16 @@ void main() {
     await tester.tap(find.text('Pump 1'));
     await tester.pumpAndSettle();
     expect(find.text('Pump 1'), findsOneWidget);
-    await tester.enterText(find.widgetWithText(TextField, 'Title *'), 'Fix pump');
+    await tester.enterText(fieldBox('Title *'), 'Fix pump');
     await tester.pumpAndSettle();
     expect(find.text('This field is required'), findsNothing);
 
     await tester.tap(find.text('Save'));
+    // The Saved toast drops in: its words show once it has opened, and it is gone after ~5s.
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.text('Saved'), findsOneWidget);
     await tester.pumpAndSettle();
     expect(posted['asset_id'], 5);
     expect(posted['title'], 'Fix pump');
@@ -166,12 +185,11 @@ void main() {
     expect(posted['labor_hours'], isNull);
     expect(posted['parts_cost'], isNull);
     expect(posted['_context'], {'app_meta_id': 5});
-    expect(posted.containsKey('parts'), isFalse);
+    expect(posted['parts'], isEmpty);
     expect(posted.containsKey('pm_plan_id'), isFalse);
     expect(posted.containsKey('id'), isFalse);
     expect(result, isTrue);
     expect(find.text('open'), findsOneWidget);
-    expect(find.text('Saved'), findsOneWidget);
   });
 
   testWidgets('autonumber preview shows for a new record', (tester) async {
@@ -186,7 +204,7 @@ void main() {
     await pumpOpener(tester, c, 40, (_) {});
     expect(find.text('T-hw-001'), findsOneWidget);
     expect(find.text('Given when saved: this is the next number.'), findsOneWidget);
-    await tester.enterText(find.widgetWithText(TextField, 'Kind'), 'sw');
+    await tester.enterText(fieldBox('Kind'), 'sw');
     await tester.pump(const Duration(milliseconds: 300));
     await tester.pumpAndSettle();
     expect(find.text('T-sw-001'), findsOneWidget);
@@ -245,7 +263,7 @@ void main() {
     await tester.tap(find.text('edit'));
     await tester.pumpAndSettle();
     expect(find.text('Save and add'), findsNothing);
-    await tester.enterText(find.widgetWithText(TextField, 'Title'), 'New');
+    await tester.enterText(fieldBox('Title'), 'New');
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
     expect(put, {'title': 'New', 'done': true, '_context': {'app_meta_id': 5}});
@@ -265,7 +283,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Fill this in before going on.'), findsOneWidget);
     expect(find.text('Beta'), findsNothing);
-    await tester.enterText(find.widgetWithText(TextField, 'Alpha *'), 'x');
+    await tester.enterText(fieldBox('Alpha *'), 'x');
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
     expect(find.text('Beta'), findsOneWidget);
@@ -275,6 +293,47 @@ void main() {
 }
 
 void moreFormTests() {
+  testWidgets('a line is added on its own page; the total follows it and the lines are sent', (tester) async {
+    final posted = <String, dynamic>{};
+    final routes = workOrderRoutes(posted: posted);
+    workOrderParams[18] = p(19, 'parts', 'Parts', 'detail', ref: 130, json: {'foreign_key': 'work_order_id', 'amount': ['quantity', 'unit_cost'], 'total_field': 'parts_cost'});
+    addTearDown(() => workOrderParams[18] = p(19, 'parts', 'Parts', 'detail', ref: 130, json: {'total_field': 'parts_cost'}));
+    final (c, _) = setup(routes);
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pumpOpener(tester, c, 129, (_) {});
+
+    await tester.tap(find.text('Add line'));
+    await tester.pumpAndSettle();
+    expect(find.text('New: Parts'), findsOneWidget);
+    expect(find.text('Work order'), findsNothing); // the foreign key is the server's
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+    expect(find.text('This field is required'), findsOneWidget); // Part
+    await tester.enterText(fieldBox('Part *'), 'Seal');
+    await tester.enterText(fieldBox('Quantity'), '2');
+    await tester.enterText(fieldBox('Unit cost'), '12.5');
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Seal'), findsOneWidget);
+    expect(find.text('25.00'), findsWidgets); // the line's amount and the section total
+    expect(find.text('Total'), findsOneWidget);
+
+    await tester.tap(find.text('Asset *'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Pump 1'));
+    await tester.pumpAndSettle();
+    await tester.enterText(fieldBox('Title *'), 'Fix pump');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(posted['parts_cost'], 25);
+    expect(posted['parts'], [
+      {'work_order_id': null, 'part': 'Seal', 'quantity': 2, 'unit_cost': 12.5},
+    ]);
+  });
+
   testWidgets('two taps on Save in the same frame send one POST', (tester) async {
     var posts = 0;
     final (c, _) = setup({
@@ -307,5 +366,61 @@ void moreFormTests() {
     await tester.pumpAndSettle();
     expect(find.text('Check the marked fields.'), findsOneWidget);
     expect(find.text('Field 30 is wrong.').hitTestable(), findsOneWidget);
+  });
+
+  testWidgets("a form's files show, one can be taken off, and saving sends the rest by id", (tester) async {
+    Map<String, dynamic>? put;
+    final (c, _) = setup({
+      'GET /api/metas/42': (_) => (200, {'id': 42, 'type': 'form', 'name': 'PO', 'json_config': {'save_and_add': false}}),
+      'GET /api/metas/42/params': (_) => (200, [
+            p(1, 'title', 'Title', 'string'),
+            p(2, 'attachments', 'Attachments', 'multifile', json: {'accept': ['pdf', 'jpg'], 'max_files': 5}),
+          ]),
+      'GET /api/metas/42/data/3': (_) => (200, {
+            'id': 3,
+            'title': 'PO-1',
+            'attachments': [
+              {'id': 7, 'file_name': 'quote.pdf', 'file_extension': 'pdf', 'file_size': 245760, 'description': null},
+              {'id': 8, 'file_name': 'box.jpg', 'file_extension': 'jpg', 'file_size': 1048576, 'description': 'Front'},
+            ],
+          }),
+      'PUT /api/metas/42/data/3': (o) {
+        put = Map<String, dynamic>.from(o.data as Map);
+        return (200, {'id': 3});
+      },
+    });
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: c,
+      child: MaterialApp(
+        localizationsDelegates: const [AppLocalizations.delegate, GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: Builder(builder: (ctx) => Column(children: [
+                TextButton(onPressed: () => openForm(ctx, formMetaId: 42, recordId: 3), child: const Text('edit')),
+                TextButton(onPressed: () => openForm(ctx, formMetaId: 42, recordId: 3, readOnly: true), child: const Text('view')),
+              ])),
+        ),
+      ),
+    ));
+    await tester.tap(find.text('view'));
+    await tester.pumpAndSettle();
+    expect(find.text('quote.pdf'), findsOneWidget);
+    expect(find.text('Add'), findsNothing, reason: 'read-only: nothing to add or remove');
+    expect(find.byTooltip('Remove file'), findsNothing);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('edit'));
+    await tester.pumpAndSettle();
+    expect(find.text('quote.pdf'), findsOneWidget);
+    expect(find.text('240 KB'), findsOneWidget);
+    expect(find.text('1.0 MB · Front'), findsOneWidget);
+    expect(find.text('Add'), findsOneWidget);
+    await tester.tap(find.byTooltip('Remove file').first);
+    await tester.pumpAndSettle();
+    expect(find.text('quote.pdf'), findsNothing);
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(put!['attachments'], [{'id': 8, 'description': 'Front'}]);
   });
 }

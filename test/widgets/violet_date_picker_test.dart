@@ -92,4 +92,56 @@ void main() {
     await tester.pumpAndSettle();
     expect(await result, DateTime(2026, 2, 10), reason: 'the 4th is before the first day allowed');
   });
+
+  Future<Future<TimeOfDay?>> openTime(WidgetTester tester, {TimeOfDay? initial}) async {
+    late Future<TimeOfDay?> result;
+    await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Builder(
+        builder: (context) => Scaffold(
+          body: Center(
+            child: TextButton(
+              onPressed: () => result = showVioletTimePicker(context, initial: initial),
+              child: const Text('Open'),
+            ),
+          ),
+        ),
+      ),
+    ));
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    return result;
+  }
+
+  testWidgets('time: wheels change hour and minute; Apply returns the time', (tester) async {
+    final result = await openTime(tester, initial: const TimeOfDay(hour: 9, minute: 5));
+    expect(find.text('09:05'), findsOneWidget);
+    await tester.drag(find.byKey(const ValueKey('hour-wheel')), const Offset(0, -44 * 2));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byKey(const ValueKey('minute-wheel')), const Offset(0, 44));
+    await tester.pumpAndSettle();
+    expect(find.text('11:04'), findsOneWidget);
+    await tester.tap(find.text('Apply'));
+    await tester.pumpAndSettle();
+    expect(await result, const TimeOfDay(hour: 11, minute: 4));
+  });
+
+  testWidgets('time: wheels loop past midnight; Cancel returns null', (tester) async {
+    final result = await openTime(tester, initial: const TimeOfDay(hour: 0, minute: 0));
+    await tester.drag(find.byKey(const ValueKey('hour-wheel')), const Offset(0, 44));
+    await tester.pumpAndSettle();
+    expect(find.text('23:00'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(await result, isNull);
+  });
+
+  testWidgets('time: Now rolls to the current time and then turns off', (tester) async {
+    final now = TimeOfDay.now();
+    await openTime(tester, initial: TimeOfDay(hour: (now.hour + 5) % 24, minute: now.minute));
+    await tester.tap(find.widgetWithText(TextButton, 'Now'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextButton>(find.widgetWithText(TextButton, 'Now')).onPressed, isNull);
+  });
 }

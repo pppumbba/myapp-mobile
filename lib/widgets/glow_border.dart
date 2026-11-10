@@ -4,6 +4,7 @@ import 'dart:ui' show lerpDouble;
 import 'package:flutter/material.dart';
 
 import '../nav/pill_bar.dart' show pillCyan, pillViolet;
+import 'tones.dart';
 
 /// An outline that, at [glow] > 0, lays a glowing violet → cyan stroke (or [color]) over the
 /// plain one, keeping the gap the floating label sits in. Focus animates [glow] 0 → 1.
@@ -91,10 +92,10 @@ class GlowOutlineBorder extends OutlineInputBorder {
 
 /// The outline set for a form field: plain at rest, glowing on focus, red with an error.
 InputDecoration withGlowBorders(InputDecoration d, ColorScheme scheme) => d.copyWith(
-      border: const GlowOutlineBorder(),
-      enabledBorder: const GlowOutlineBorder(),
+      border: GlowOutlineBorder(borderSide: BorderSide(color: scheme.restLine, width: 2)),
+      enabledBorder: GlowOutlineBorder(borderSide: BorderSide(color: scheme.restLine, width: 2)),
       focusedBorder: const GlowOutlineBorder(glow: 1),
       errorBorder: GlowOutlineBorder(borderSide: BorderSide(color: scheme.error.withValues(alpha: 0.7), width: 2)),
       focusedErrorBorder: GlowOutlineBorder(glow: 1, color: scheme.error),
-      disabledBorder: const GlowOutlineBorder(borderSide: BorderSide(color: Color(0x14FFFFFF), width: 2)),
+      disabledBorder: GlowOutlineBorder(borderSide: BorderSide(color: scheme.hairline, width: 2)),
     );

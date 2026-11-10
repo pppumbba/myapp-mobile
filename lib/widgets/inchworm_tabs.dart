@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../nav/pill_bar.dart' show pillCyan, pillViolet, springAt;
+import 'tones.dart' show appFont;
 
 double _easeInOutCubic(double k) {
   k = k.clamp(0.0, 1.0);
@@ -18,7 +19,8 @@ double _easeInOutCubic(double k) {
   return (left: from.left + (to.left - from.left) * l, right: from.right + (to.right - from.right) * r);
 }
 
-const _labelStyle = TextStyle(fontSize: 15, fontWeight: FontWeight.w600);
+// Named font: the label is measured with a TextPainter, which doesn't inherit the theme's.
+const _labelStyle = TextStyle(fontFamily: appFont, fontSize: 15, fontWeight: FontWeight.w600);
 const _tabPad = 16.0;
 
 /// A row of text tabs with a gradient underline that inches from one label to the next.

@@ -494,6 +494,12 @@ abstract class AppLocalizations {
   /// **'Today'**
   String get today;
 
+  /// No description provided for @now.
+  ///
+  /// In en, this message translates to:
+  /// **'Now'**
+  String get now;
+
   /// No description provided for @tomorrow.
   ///
   /// In en, this message translates to:
@@ -517,6 +523,438 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} days ago'**
   String daysAgo(int count);
+
+  /// No description provided for @personalInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal info'**
+  String get personalInfo;
+
+  /// No description provided for @personalInfoNote.
+  ///
+  /// In en, this message translates to:
+  /// **'How you appear in the app, and the email you log in with.'**
+  String get personalInfoNote;
+
+  /// No description provided for @name.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get name;
+
+  /// No description provided for @saveChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Save changes'**
+  String get saveChanges;
+
+  /// No description provided for @appearance.
+  ///
+  /// In en, this message translates to:
+  /// **'Appearance'**
+  String get appearance;
+
+  /// No description provided for @themeSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get themeSystem;
+
+  /// No description provided for @themeLight.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get themeLight;
+
+  /// No description provided for @themeDark.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark'**
+  String get themeDark;
+
+  /// No description provided for @language.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get language;
+
+  /// No description provided for @languageNote.
+  ///
+  /// In en, this message translates to:
+  /// **'The language of screen names, field labels, buttons and statuses, where they have been translated.'**
+  String get languageNote;
+
+  /// No description provided for @languageAsPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'As my phone is'**
+  String get languageAsPhone;
+
+  /// No description provided for @customers.
+  ///
+  /// In en, this message translates to:
+  /// **'Customers'**
+  String get customers;
+
+  /// No description provided for @customersNote.
+  ///
+  /// In en, this message translates to:
+  /// **'The companies you work in. Each has its own apps, people and data.'**
+  String get customersNote;
+
+  /// No description provided for @openNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Open now'**
+  String get openNow;
+
+  /// No description provided for @admin.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin'**
+  String get admin;
+
+  /// No description provided for @currentPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Current password'**
+  String get currentPassword;
+
+  /// No description provided for @newPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'New password'**
+  String get newPassword;
+
+  /// No description provided for @confirmPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm new password'**
+  String get confirmPassword;
+
+  /// No description provided for @passwordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'At least 8 characters.'**
+  String get passwordHint;
+
+  /// No description provided for @passwordsDontMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'The passwords don\'t match.'**
+  String get passwordsDontMatch;
+
+  /// No description provided for @changePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Change password'**
+  String get changePassword;
+
+  /// No description provided for @passwordChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Password changed'**
+  String get passwordChanged;
+
+  /// No description provided for @passwordNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Changing it signs you out everywhere else; you stay signed in here.'**
+  String get passwordNote;
+
+  /// No description provided for @choose.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose'**
+  String get choose;
+
+  /// No description provided for @edit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get edit;
+
+  /// No description provided for @addLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Add line'**
+  String get addLine;
+
+  /// No description provided for @noLines.
+  ///
+  /// In en, this message translates to:
+  /// **'No lines yet'**
+  String get noLines;
+
+  /// No description provided for @total.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get total;
+
+  /// No description provided for @removeLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove this line?'**
+  String get removeLine;
+
+  /// No description provided for @newLine.
+  ///
+  /// In en, this message translates to:
+  /// **'New: {name}'**
+  String newLine(String name);
+
+  /// No description provided for @done.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get done;
+
+  /// No description provided for @addPicked.
+  ///
+  /// In en, this message translates to:
+  /// **'Add {count}'**
+  String addPicked(int count);
+
+  /// No description provided for @pickToWorkOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a {name} to work on'**
+  String pickToWorkOn(String name);
+
+  /// No description provided for @recordNotLoaded.
+  ///
+  /// In en, this message translates to:
+  /// **'This record could not be loaded.'**
+  String get recordNotLoaded;
+
+  /// No description provided for @workspaceNoSections.
+  ///
+  /// In en, this message translates to:
+  /// **'This workspace has no sections yet.'**
+  String get workspaceNoSections;
+
+  /// No description provided for @workspaceNeedsForm.
+  ///
+  /// In en, this message translates to:
+  /// **'This workspace needs a form for its record.'**
+  String get workspaceNeedsForm;
+
+  /// Placeholder on the right of an empty text row in a form
+  ///
+  /// In en, this message translates to:
+  /// **'Enter'**
+  String get fieldEnter;
+
+  /// No description provided for @inbox.
+  ///
+  /// In en, this message translates to:
+  /// **'Inbox'**
+  String get inbox;
+
+  /// No description provided for @chats.
+  ///
+  /// In en, this message translates to:
+  /// **'Chats'**
+  String get chats;
+
+  /// No description provided for @newChat.
+  ///
+  /// In en, this message translates to:
+  /// **'New chat'**
+  String get newChat;
+
+  /// No description provided for @noChats.
+  ///
+  /// In en, this message translates to:
+  /// **'No chats yet. Start one with +.'**
+  String get noChats;
+
+  /// No description provided for @messageHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get messageHint;
+
+  /// No description provided for @seen.
+  ///
+  /// In en, this message translates to:
+  /// **'Seen'**
+  String get seen;
+
+  /// No description provided for @typingNow.
+  ///
+  /// In en, this message translates to:
+  /// **'typing…'**
+  String get typingNow;
+
+  /// No description provided for @you.
+  ///
+  /// In en, this message translates to:
+  /// **'You'**
+  String get you;
+
+  /// No description provided for @findPeople.
+  ///
+  /// In en, this message translates to:
+  /// **'Find people'**
+  String get findPeople;
+
+  /// No description provided for @sendFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not send. Try again.'**
+  String get sendFailed;
+
+  /// No description provided for @send.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get send;
+
+  /// No description provided for @delivered.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivered'**
+  String get delivered;
+
+  /// No description provided for @noPeople.
+  ///
+  /// In en, this message translates to:
+  /// **'No one else is here yet.'**
+  String get noPeople;
+
+  /// No description provided for @noConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'No connection'**
+  String get noConnection;
+
+  /// No description provided for @couldNotLoad.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load this'**
+  String get couldNotLoad;
+
+  /// No description provided for @addFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get addFile;
+
+  /// No description provided for @replaceFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace'**
+  String get replaceFile;
+
+  /// No description provided for @removeFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove file'**
+  String get removeFile;
+
+  /// No description provided for @noFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'No files'**
+  String get noFiles;
+
+  /// No description provided for @takePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Take photo'**
+  String get takePhoto;
+
+  /// No description provided for @photoLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo library'**
+  String get photoLibrary;
+
+  /// No description provided for @browseFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse files'**
+  String get browseFiles;
+
+  /// No description provided for @upTo.
+  ///
+  /// In en, this message translates to:
+  /// **'up to {size}'**
+  String upTo(String size);
+
+  /// No description provided for @fileTypeNotAllowed.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} can\'t be added here. Allowed: {types}'**
+  String fileTypeNotAllowed(String name, String types);
+
+  /// No description provided for @fileTooBig.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is too big. The limit is {size}.'**
+  String fileTooBig(String name, String size);
+
+  /// No description provided for @fileLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'This field takes at most {count} files.'**
+  String fileLimit(int count);
+
+  /// No description provided for @couldNotPick.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t get the file. Check the app\'s photo and file permissions.'**
+  String get couldNotPick;
+
+  /// No description provided for @noAppToOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'No app on this phone opens this kind of file.'**
+  String get noAppToOpen;
+
+  /// No description provided for @filesUploading.
+  ///
+  /// In en, this message translates to:
+  /// **'Wait for the files to finish uploading.'**
+  String get filesUploading;
+
+  /// No description provided for @shareToChat.
+  ///
+  /// In en, this message translates to:
+  /// **'Share to chat'**
+  String get shareToChat;
+
+  /// No description provided for @addNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a note (optional)'**
+  String get addNote;
+
+  /// No description provided for @people.
+  ///
+  /// In en, this message translates to:
+  /// **'People'**
+  String get people;
+
+  /// No description provided for @sharedWith.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared with {name}'**
+  String sharedWith(String name);
+
+  /// No description provided for @noPeopleFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No one matches “{query}”.'**
+  String noPeopleFound(String query);
+
+  /// No description provided for @dragPickHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tip: hold a card and slide to pick several'**
+  String get dragPickHint;
 }
 
 class _AppLocalizationsDelegate

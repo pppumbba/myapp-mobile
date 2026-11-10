@@ -7,6 +7,7 @@ class Meta {
   final int id;
   final String? code;
   final String? name;
+  final String? description;
   final String? type;
   final Map<String, dynamic> jsonConfig;
   final int? refMetaId;
@@ -17,6 +18,7 @@ class Meta {
     required this.id,
     this.code,
     this.name,
+    this.description,
     this.type,
     this.jsonConfig = const {},
     this.refMetaId,
@@ -36,6 +38,7 @@ class Meta {
         id: _int(j['id'])!,
         code: j['code'] as String?,
         name: j['name'] as String?,
+        description: j['description'] as String?,
         // The API sends the meta type as an object {id, code, name}; a plain code is accepted too.
         type: j['type'] is Map ? (j['type'] as Map)['code'] as String? : j['type'] as String?,
         jsonConfig: _map(j['json_config']),

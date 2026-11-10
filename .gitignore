@@ -1,5 +1,6 @@
 # Per-app build output
 app.json
+assets/app/icon.png
 *.log
 .DS_Store
 .idea

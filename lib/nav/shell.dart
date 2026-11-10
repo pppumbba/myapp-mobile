@@ -2,19 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../api/client.dart';
 import '../auth/session.dart';
 import '../l10n/app_localizations.dart';
 import '../meta/defs.dart';
 import '../screens/screen_view.dart';
 import '../widgets/inchworm_tabs.dart';
+import '../widgets/skeleton.dart';
+import '../widgets/row_group.dart';
 import 'icons.dart';
+import '../chat/inbox.dart' show InboxBell, listenForChats;
 import 'notifications.dart';
 import 'pill_bar.dart';
 import 'scroll_chrome.dart';
 import 'top_bar.dart';
 import 'menu.dart';
-import '../widgets/snap_sheet.dart';
+import '../account/account.dart';
+import '../widgets/error_state.dart';
 
 const maxTabBranches = 5;
 
@@ -98,24 +101,40 @@ class MorePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final menu = ref.watch(mobileMenuProvider).value;
     if (menu == null) return const SizedBox.shrink();
+    // The account page's rounded blocks: a section with screens under its heading; screens of
+    // their own that follow each other share one block without a heading.
     final children = <Widget>[];
-    for (final section in menu.more) {
-      if (section.children.isNotEmpty) {
-        children.add(Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-          child: Text(section.label, style: Theme.of(context).textTheme.labelLarge),
-        ));
-      }
-      for (final e in section.screens) {
-        children.add(ListTile(
-          leading: Icon(menuIcon(e.item.iconCls ?? section.item.iconCls)),
-          title: Text(e.label),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => context.go('$moreLocation/screen/${e.metaId}'),
-        ));
-      }
+    var loose = <Widget>[];
+    void flushLoose() {
+      if (loose.isEmpty) return;
+      children.add(Padding(padding: const EdgeInsets.only(top: 16), child: RowGroup(children: loose)));
+      loose = [];
     }
-    return ListView(children: children);
+
+    for (final section in menu.more) {
+      final rows = [
+        for (final e in section.screens)
+          IconRow(
+            icon: menuIcon(e.item.iconCls ?? section.item.iconCls),
+            title: e.label,
+            onTap: () => context.go('$moreLocation/screen/${e.metaId}'),
+          ),
+      ];
+      if (section.children.isEmpty) {
+        loose.addAll(rows);
+        continue;
+      }
+      flushLoose();
+      children
+        ..add(RowGroupHeading(section.label))
+        ..add(RowGroup(children: rows));
+    }
+    flushLoose();
+    // An explicit padding drops ListView's own safe-area padding, so the tab bar's height is added back.
+    return ListView(
+      padding: EdgeInsets.fromLTRB(16, 0, 16, 24 + MediaQuery.paddingOf(context).bottom),
+      children: children,
+    );
   }
 }
 
@@ -139,44 +158,38 @@ class AppShell extends ConsumerWidget {
     final menu = ref.watch(mobileMenuProvider);
     final userName = ref.watch(sessionProvider.select((s) => '${s.user?['name'] ?? ''}'));
     listenForArrivals(context, ref);
-    final account = AccountAvatar(name: userName, tooltip: l.account, onPressed: () => showAccountSheet(context, ref));
+    listenForChats(context, ref);
+    final account = AccountAvatar(name: userName, tooltip: l.account, onPressed: () => showAccountSheet(context));
     // The app's name and mark stay out of the app: the bar holds only the user's tools.
     PreferredSizeWidget bar({Widget? leading, Widget? search}) => AppBar(
           automaticallyImplyLeading: false,
           titleSpacing: 16,
+          centerTitle: false,
           title: Row(children: [
             if (leading != null) ...[leading, const SizedBox(width: 8)],
             Expanded(child: search ?? const SizedBox.shrink()),
             const SizedBox(width: 10),
-            if (search != null) ...[const NotificationBell(), const SizedBox(width: 10)],
+            if (search != null) ...[const InboxBell(), const SizedBox(width: 10)],
             account,
           ]),
         );
 
+    // A reload (another language or customer) keeps the old menu up until the new one is in, so
+    // the tab navigators and any page pushed over them stay put.
     return menu.when(
+      skipLoadingOnReload: true,
       loading: () => Scaffold(
         appBar: bar(),
-        body: const _MenuSkeleton(),
+        // The first screen's cards, as every other load shows.
+        body: const CardListSkeleton(),
       ),
       error: (e, _) => Scaffold(
         appBar: bar(),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Text(e is ApiError ? e.message : l.somethingWrong, textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: () {
-                  ref.invalidate(metaDefProvider);
-                  ref.invalidate(metaTypeProvider);
-                  ref.invalidate(mobileMenuProvider);
-                },
-                child: Text(l.retry),
-              ),
-            ]),
-          ),
-        ),
+        body: ErrorState.of(context, e, onRetry: () {
+          ref.invalidate(metaDefProvider);
+          ref.invalidate(metaTypeProvider);
+          ref.invalidate(mobileMenuProvider);
+        }),
       ),
       data: (m) {
         if (m.all.isEmpty) {
@@ -300,88 +313,34 @@ class _MenuSearchPageState extends State<MenuSearchPage> {
     ];
     return Scaffold(
       appBar: AppBar(
-        title: TextField(
-          autofocus: true,
-          onChanged: (v) => setState(() => _q = v),
-          textInputAction: TextInputAction.search,
-          decoration: InputDecoration(hintText: l.searchMenus, border: InputBorder.none),
+        titleSpacing: 0,
+        centerTitle: false,
+        // The top bar's pill, now typed into: it keeps its look.
+        title: Padding(
+          padding: const EdgeInsets.only(right: 16),
+          child: MenuSearchField(hint: l.searchMenus, onChanged: (v) => setState(() => _q = v)),
         ),
       ),
       body: hits.isEmpty
           ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(l.noMenuMatch)))
-          : ListView(children: [
-              for (final (section, e) in hits)
-                ListTile(
-                  leading: Icon(menuIcon(e.item.iconCls ?? section.item.iconCls)),
-                  title: Text(e.label),
-                  subtitle: identical(e.item, section.item) ? null : Text(section.label),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    widget.onPick(section, e);
-                  },
-                ),
+          // Hits under their section's heading, in the account page's rounded blocks.
+          : ListView(padding: const EdgeInsets.fromLTRB(16, 0, 16, 24), children: [
+              for (final section in {for (final (s, _) in hits) s}) ...[
+                RowGroupHeading(section.label),
+                RowGroup(children: [
+                  for (final (s, e) in hits)
+                    if (identical(s, section))
+                      IconRow(
+                        icon: menuIcon(e.item.iconCls ?? section.item.iconCls),
+                        title: e.label,
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          widget.onPick(section, e);
+                        },
+                      ),
+                ]),
+              ],
             ]),
-    );
-  }
-}
-
-void showAccountSheet(BuildContext context, WidgetRef ref) {
-  final l = AppLocalizations.of(context);
-  final s = ref.read(sessionProvider);
-  final name = '${s.user?['name'] ?? ''}';
-  final email = '${s.user?['email'] ?? ''}';
-  final customer = s.info?.customerCode;
-  showSnapSheet<void>(
-    context,
-    initial: SnapHeight.peek,
-    builder: (ctx) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            leading: const Icon(Icons.account_circle_outlined),
-            title: Text(name),
-            subtitle: email.isEmpty ? null : Text(email),
-          ),
-          if (customer != null)
-            ListTile(
-              leading: const Icon(Icons.business_outlined),
-              title: Text(l.organization),
-              subtitle: Text(customer),
-            ),
-          ListTile(
-            leading: const Icon(Icons.logout),
-            title: Text(l.signOut),
-            onTap: () {
-              Navigator.of(ctx).pop();
-              ref.read(sessionProvider.notifier).signOut();
-            },
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-class _MenuSkeleton extends StatelessWidget {
-  const _MenuSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    final c = Theme.of(context).colorScheme.surfaceContainerHighest;
-    return ListView(
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(16),
-      children: [
-        for (var i = 0; i < 6; i++)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Container(
-              height: 56,
-              decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-      ],
     );
   }
 }

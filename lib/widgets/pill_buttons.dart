@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../nav/pill_bar.dart' show pillCyan, pillViolet;
+import 'tones.dart';
 
-const _pink = Color(0xFFFF5CA8), _coral = Color(0xFFFF7B8C);
+const pillPink = Color(0xFFFF5CA8), pillCoral = Color(0xFFFF7B8C);
 
 /// The quiet choice (Cancel, Back, Save and add): a 48px pill in a faint white tint.
 class SoftButton extends StatelessWidget {
@@ -14,13 +15,13 @@ class SoftButton extends StatelessWidget {
   Widget build(BuildContext context) => TextButton(
         onPressed: onPressed,
         style: TextButton.styleFrom(
-          backgroundColor: Colors.white.withValues(alpha: 0.07),
+          backgroundColor: Theme.of(context).colorScheme.softFill,
           foregroundColor: Theme.of(context).colorScheme.onSurface,
           minimumSize: const Size.fromHeight(48),
           padding: const EdgeInsets.symmetric(horizontal: 20),
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           shape: const StadiumBorder(),
-          textStyle: const TextStyle(fontWeight: FontWeight.w600),
+          textStyle: const TextStyle(fontFamily: appFont, fontWeight: FontWeight.w600),
         ),
         child: child,
       );
@@ -41,7 +42,7 @@ class GradientButton extends StatelessWidget {
         child: DecoratedBox(
           decoration: ShapeDecoration(
             shape: const StadiumBorder(),
-            gradient: LinearGradient(colors: destructive ? const [_pink, _coral] : const [pillViolet, pillCyan]),
+            gradient: LinearGradient(colors: destructive ? const [pillPink, pillCoral] : const [pillViolet, pillCyan]),
           ),
           child: FilledButton(
             onPressed: onPressed,
@@ -55,7 +56,7 @@ class GradientButton extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               shape: const StadiumBorder(),
-              textStyle: const TextStyle(fontWeight: FontWeight.w700),
+              textStyle: const TextStyle(fontFamily: appFont, fontWeight: FontWeight.w700),
             ),
             child: child,
           ),

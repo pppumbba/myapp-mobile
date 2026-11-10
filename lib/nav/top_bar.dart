@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/tones.dart';
 import 'pill_bar.dart' show pillCyan, pillViolet;
 
 /// The top bar's round button: a dark tile with a faint rim, the icon in the middle.
@@ -20,7 +21,7 @@ class TopBarButton extends StatelessWidget {
         excludeSemantics: true,
         child: Material(
           color: scheme.surfaceContainerHigh,
-          shape: const CircleBorder(side: BorderSide(color: Color(0x14FFFFFF))),
+          shape: CircleBorder(side: BorderSide(color: scheme.hairline)),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: onPressed,
@@ -31,6 +32,39 @@ class TopBarButton extends StatelessWidget {
     );
   }
 }
+
+const _menuSearchHero = 'menu-search';
+
+/// The pill's track, shared by [MenuSearchPill] and [MenuSearchField] so the search keeps its look.
+Widget _menuSearchTrack(BuildContext context, {required Widget child, VoidCallback? onTap}) {
+  final scheme = Theme.of(context).colorScheme;
+  return Hero(
+    tag: _menuSearchHero,
+    child: Material(
+      color: scheme.surfaceContainerHigh,
+      shape: StadiumBorder(side: BorderSide(color: scheme.hairline)),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          height: 44,
+          child: Row(children: [
+            const SizedBox(width: 14),
+            ShaderMask(
+              shaderCallback: (r) => const LinearGradient(colors: [pillViolet, pillCyan]).createShader(r),
+              child: const Icon(Icons.search, size: 22, color: Colors.white),
+            ),
+            const SizedBox(width: 10),
+            Expanded(child: child),
+          ]),
+        ),
+      ),
+    ),
+  );
+}
+
+TextStyle _menuSearchText(ColorScheme scheme, {bool hint = false}) =>
+    TextStyle(color: hint ? scheme.onSurfaceVariant : scheme.onSurface, fontSize: 15, fontWeight: FontWeight.w500);
 
 /// Fills the left of the top bar: looks like a search field, opens the menu search.
 class MenuSearchPill extends StatelessWidget {
@@ -47,27 +81,43 @@ class MenuSearchPill extends StatelessWidget {
         button: true,
         label: hint,
         excludeSemantics: true,
-        child: Material(
-          color: scheme.surfaceContainerHigh,
-          shape: const StadiumBorder(side: BorderSide(color: Color(0x14FFFFFF))),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onPressed,
-            child: SizedBox(
-              height: 44,
-              child: Row(children: [
-                const SizedBox(width: 14),
-                ShaderMask(
-                  shaderCallback: (r) => const LinearGradient(colors: [pillViolet, pillCyan]).createShader(r),
-                  child: const Icon(Icons.search, size: 22, color: Colors.white),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(hint, maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 15, fontWeight: FontWeight.w500)),
-                ),
-              ]),
-            ),
+        child: _menuSearchTrack(
+          context,
+          onTap: onPressed,
+          child: Text(hint, maxLines: 1, overflow: TextOverflow.ellipsis, style: _menuSearchText(scheme, hint: true)),
+        ),
+      ),
+    );
+  }
+}
+
+/// The same pill on the menu search page, now typed into; it flies there from [MenuSearchPill].
+class MenuSearchField extends StatelessWidget {
+  final String hint;
+  final ValueChanged<String> onChanged;
+  const MenuSearchField({super.key, required this.hint, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return _menuSearchTrack(
+      context,
+      child: Padding(
+        padding: const EdgeInsets.only(right: 14),
+        child: TextField(
+          autofocus: true,
+          onChanged: onChanged,
+          textInputAction: TextInputAction.search,
+          style: _menuSearchText(scheme),
+          cursorColor: pillCyan,
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: _menuSearchText(scheme, hint: true),
+            isCollapsed: true,
+            filled: false,
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
           ),
         ),
       ),
@@ -79,8 +129,9 @@ class MenuSearchPill extends StatelessWidget {
 class AccountAvatar extends StatelessWidget {
   final String name;
   final String tooltip;
-  final VoidCallback onPressed;
-  const AccountAvatar({super.key, required this.name, required this.tooltip, required this.onPressed});
+  final VoidCallback? onPressed;
+  final double size;
+  const AccountAvatar({super.key, required this.name, required this.tooltip, required this.onPressed, this.size = 44});
 
   @override
   Widget build(BuildContext context) {
@@ -95,8 +146,8 @@ class AccountAvatar extends StatelessWidget {
           onTap: onPressed,
           customBorder: const CircleBorder(),
           child: Container(
-            width: 44,
-            height: 44,
+            width: size,
+            height: size,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
@@ -105,8 +156,8 @@ class AccountAvatar extends StatelessWidget {
               boxShadow: [BoxShadow(color: pillViolet.withValues(alpha: 0.35), blurRadius: 10)],
             ),
             child: initial == null
-                ? const Icon(Icons.person, color: Colors.white, size: 22)
-                : Text(initial, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700)),
+                ? Icon(Icons.person, color: Colors.white, size: size / 2)
+                : Text(initial, style: TextStyle(color: Colors.white, fontSize: size * 0.41, fontWeight: FontWeight.w700)),
           ),
         ),
       ),

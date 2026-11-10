@@ -139,4 +139,43 @@ void main() {
     expect(autonumberFields(cfg), ['site', 'type']);
     expect(autonumberOf(fp('x')), isNull);
   });
+
+  group('file fields', () {
+    final params = [
+      fp('title'),
+      fp('attachments', type: 'multifile', required: true),
+      fp('photo', type: 'singlefile'),
+    ];
+    const pdf = {'id': 9, 'file_name': 'quote.pdf', 'file_extension': 'pdf', 'file_size': 1200, 'description': 'Signed'};
+
+    test('only a form takes them; detail lines leave them out', () {
+      expect(formFields(params).map(pathOf), ['title']);
+      expect(formFields(params, files: true).map(pathOf), containsAll(['title', 'attachments', 'photo']));
+    });
+
+    test("a record's files become the value; a single file too", () {
+      final v = initialValues(params, files: true, record: {
+        'title': 'PO',
+        'attachments': [pdf],
+        'photo': {'id': 4, 'file_name': 'a.jpg'},
+      });
+      expect(filesOf(v['attachments']).single['file_name'], 'quote.pdf');
+      expect(filesOf(v['photo']).single['id'], 4);
+      expect(initialValues(params, files: true)['attachments'], '');
+    });
+
+    test('saving sends ids with descriptions: a list, or one file or null', () {
+      final v = initialValues(params, files: true, record: {'attachments': [pdf], 'photo': null});
+      final body = toPayload(params, v, appMetaId: null, files: true);
+      expect(body['attachments'], [{'id': 9, 'description': 'Signed'}]);
+      expect(body['photo'], isNull);
+      expect(toPayload(params, v, appMetaId: null).containsKey('attachments'), isFalse, reason: 'lines never send them');
+    });
+
+    test('a required file field with no files is missing', () {
+      expect(missingRequired(params, {'title': '', 'attachments': '', 'photo': ''}, const {}, files: true), ['attachments']);
+      expect(missingRequired(params, {'title': '', 'attachments': '[]', 'photo': ''}, const {}, files: true), ['attachments']);
+      expect(missingRequired(params, {'title': '', 'attachments': '[{"id":1}]', 'photo': ''}, const {}, files: true), isEmpty);
+    });
+  });
 }

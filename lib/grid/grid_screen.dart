@@ -28,6 +28,14 @@ import 'record_card.dart';
 import 'swipe_actions.dart';
 import 'row_actions.dart';
 import '../widgets/snap_sheet.dart';
+import '../widgets/skeleton.dart';
+import '../widgets/edge_fade.dart';
+import '../widgets/row_group.dart';
+import '../chat/share_record.dart';
+import '../widgets/drop_toast.dart';
+import '../widgets/bin_icon.dart';
+import '../widgets/error_state.dart';
+import '../widgets/pill_buttons.dart' show SoftButton;
 
 /// A datagrid as a list of cards: search, filter sheet with chips, infinite scroll, Add FAB,
 /// row buttons in a bottom sheet. [fixed] values are the grid's scope (always applied) and are
@@ -121,11 +129,13 @@ class _GridScreenState extends ConsumerState<GridScreen> {
     }
   }
 
-  /// Reloads from page 1. Old rows stay visible until the answer lands.
-  Future<void> _reload() async {
+  /// Reloads from page 1. Old rows stay visible until the answer lands, unless [fresh] (another search
+  /// or filter): then they give way to skeleton cards at once, as they no longer match.
+  Future<void> _reload({bool fresh = false}) async {
     final gen = ++_generation;
     _q.page = 1;
     setState(() {
+      if (fresh) _rows.clear();
       _loading = true;
       _loadingMore = false;
       _error = null;
@@ -208,7 +218,8 @@ class _GridScreenState extends ConsumerState<GridScreen> {
     return [?s.title, ?s.subtitle, ?s.badge, ...s.body, ...s.footer];
   }
 
-  CardSlots get _slots => cardSlots(_params);
+  // Scoped columns (fixed) say the same on every card, so they are left out, as their filters are.
+  CardSlots get _slots => cardSlots([for (final p in _params) if (!widget.fixed.containsKey(p.paramName)) p]);
 
   Future<void> _prefetch(List<Map<String, dynamic>> rows) async {
     final svc = ref.read(lookupServiceProvider);
@@ -253,11 +264,11 @@ class _GridScreenState extends ConsumerState<GridScreen> {
     _debounce = Timer(const Duration(milliseconds: 300), () {
       if (!mounted || _q.search == s) return;
       _q.search = s;
-      _reload();
+      _reload(fresh: true);
     });
   }
 
-  List<MetaParam> get _filters => filterParams(_params);
+  List<MetaParam> get _filters => [for (final p in filterParams(_params)) if (!widget.fixed.containsKey(pathOf(p))) p];
 
   Future<void> _openFilters() async {
     final picked = await showFilterSheet(
@@ -270,13 +281,13 @@ class _GridScreenState extends ConsumerState<GridScreen> {
     if (picked == null || !mounted) return;
     _q.filter = picked;
     _sheetShownForMissing = false;
-    _reload();
+    _reload(fresh: true);
   }
 
   void _removeFilter(String path) {
     _q.filter = {..._q.filter}..remove(path);
     _sheetShownForMissing = false;
-    _reload();
+    _reload(fresh: true);
   }
 
   String _labelOf(String path) =>
@@ -295,7 +306,7 @@ class _GridScreenState extends ConsumerState<GridScreen> {
 
   void _openOnWeb() {
     final l = AppLocalizations.of(context);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${l.openOnWebTitle}. ${l.openOnWebBody}')));
+    showDropToast(context, title: l.openOnWebTitle, body: l.openOnWebBody, icon: Icons.open_in_new_rounded);
   }
 
   Future<void> _tap(Map<String, dynamic> row, List<MetaAction> all) async {
@@ -305,7 +316,7 @@ class _GridScreenState extends ConsumerState<GridScreen> {
     if (d != null) {
       await Navigator.of(context, rootNavigator: true).push(MaterialPageRoute<void>(
         builder: (_) => Scaffold(
-          appBar: AppBar(title: Text(d.label ?? _rowTitle(row))),
+          appBar: AppBar(title: Text(_rowTitle(row).isNotEmpty ? _rowTitle(row) : d.label ?? '')),
           body: ScreenView(metaId: d.metaId, fixed: drillParams(d.params, row)),
         ),
       ));
@@ -324,26 +335,64 @@ class _GridScreenState extends ConsumerState<GridScreen> {
     }
   }
 
+  /// The row's actions not shown on its swiped card (behind More), as a sheet of rows.
   Future<void> _rowSheet(Map<String, dynamic> row, List<MetaAction> actions) async {
     final picked = await showSnapSheet<MetaAction>(
       context,
       initial: SnapHeight.peek,
-      builder: (ctx) => SafeArea(
-        child: ListView(shrinkWrap: true, children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Text(_rowTitle(row), style: Theme.of(ctx).textTheme.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
-          ),
+      builder: (ctx) => _RowMenu(
+        title: _rowTitle(row),
+        children: [
           for (final a in actions)
-            ListTile(
-              leading: Icon(_actionIcon(a)),
-              title: Text(a.label ?? a.action ?? ''),
+            IconRow(
+              icon: _actionIcon(a),
+              title: a.label ?? a.action ?? '',
+              color: a.action == 'delete' ? deleteRed : null,
+              iconChild: a.action == 'delete' ? const BinIcon(size: 18, color: deleteRed) : null,
               onTap: () => Navigator.of(ctx).pop(a),
             ),
-        ]),
+        ],
       ),
     );
     if (picked != null && mounted) await _run(picked, row);
+  }
+
+  /// Long-press on a row: Share to chat, the one thing done there (its actions are on swipe).
+  Future<void> _shareSheet(Map<String, dynamic> row) async {
+    final l = AppLocalizations.of(context);
+    final share = await showSnapSheet<bool>(
+      context,
+      initial: SnapHeight.peek,
+      builder: (ctx) => _RowMenu(
+        title: _rowTitle(row),
+        children: [IconRow(icon: Icons.forum_outlined, title: l.shareToChat, onTap: () => Navigator.of(ctx).pop(true))],
+      ),
+    );
+    if (share != true || !mounted) return;
+    await Navigator.of(context, rootNavigator: true)
+        .push(MaterialPageRoute<void>(builder: (_) => ShareRecordPage(record: _shareCard(row))));
+  }
+
+  /// The card a shared row shows in the chat: "Grid · row title" and the first six shown values
+  /// (files and the like left out), as they read here.
+  Map<String, dynamic> _shareCard(Map<String, dynamic> row) {
+    final l = AppLocalizations.of(context);
+    const skip = {'singlefile', 'multifile', 'document', 'json', 'signature', 'widget'};
+    final fields = <Map<String, String>>[];
+    for (final p in _params) {
+      if (fields.length >= 6) break;
+      if (!p.isShow || skip.contains(p.dataType)) continue;
+      final v = cellText(p, row, lookupText: _lookupText, l10n: l);
+      if (v.isNotEmpty) fields.add({'label': p.label, 'value': v});
+    }
+    final grid = _def?.meta.name ?? '';
+    final name = _rowTitle(row);
+    return {
+      'meta_id': widget.metaId,
+      'record_id': '${row[primaryKey(_params)]}',
+      'title': [if (grid.isNotEmpty) grid, if (name.isNotEmpty) name].join(' · '),
+      'fields': fields,
+    };
   }
 
   IconData _actionIcon(MetaAction a) => switch (a.action) {
@@ -400,7 +449,7 @@ class _GridScreenState extends ConsumerState<GridScreen> {
       if (mounted && reload) _reload();
       return true;
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e is ApiError ? e.message : l.somethingWrong)));
+      if (mounted) showDropToast(context, title: e is ApiError ? e.message : l.somethingWrong, icon: Icons.error_outline_rounded);
       return false;
     }
   }
@@ -460,14 +509,11 @@ class _GridScreenState extends ConsumerState<GridScreen> {
     final acts = ref.watch(actionsProvider(widget.metaId));
     ref.watch(sessionProvider.select((s) => s.access));
 
-    Widget failure(Object e, VoidCallback retry) => _Message(
-          text: e is ApiError ? e.message : l.somethingWrong,
-          action: FilledButton(onPressed: retry, child: Text(l.retry)),
-        );
+    Widget failure(Object e, VoidCallback retry) => ErrorState.of(context, e, onRetry: retry);
 
     if (def.hasError) return failure(def.error!, () => ref.invalidate(metaDefProvider(widget.metaId)));
     if (acts.hasError) return failure(acts.error!, () => ref.invalidate(actionsProvider(widget.metaId)));
-    if (!def.hasValue || !acts.hasValue) return const Center(child: RefreshRing());
+    if (!def.hasValue || !acts.hasValue) return const CardListSkeleton();
 
     if (!_started) {
       _started = true;
@@ -613,7 +659,7 @@ class _GridScreenState extends ConsumerState<GridScreen> {
     _q.filter = {..._q.filter}..remove(path);
     if (picked[path] case final v? when v.isNotEmpty) _q.filter = {..._q.filter, path: v};
     _sheetShownForMissing = false;
-    _reload();
+    _reload(fresh: true);
   }
 
   String? _footerText(AppLocalizations l) {
@@ -634,7 +680,8 @@ class _GridScreenState extends ConsumerState<GridScreen> {
   Widget _list(AppLocalizations l, CardSlots slots, List<MetaAction> all, List<MetaAction> rowActs) {
     Widget scrollable(Widget child) => PullRefresh(
           onRefresh: _pullReload,
-          loading: _loading,
+          // With no rows the skeleton cards show the load; the ring would only repeat it.
+          loading: _loading && _rows.isNotEmpty,
           child: LayoutBuilder(
             builder: (_, c) => SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -644,7 +691,7 @@ class _GridScreenState extends ConsumerState<GridScreen> {
         );
 
     if (_error != null && _rows.isEmpty) {
-      return scrollable(_Message(text: _error!.message, action: FilledButton(onPressed: _reload, child: Text(l.retry))));
+      return scrollable(ErrorState.of(context, _error!, onRetry: _reload));
     }
     if (_missing.isNotEmpty) {
       return scrollable(_Message(
@@ -653,7 +700,7 @@ class _GridScreenState extends ConsumerState<GridScreen> {
       ));
     }
     if (_rows.isEmpty) {
-      return scrollable(_loading || !_started ? const SizedBox.shrink() : _Message(text: l.noResults));
+      return scrollable(_loading || !_started ? const CardListSkeleton() : _Message(text: l.noResults));
     }
 
     final more = _q.page < _lastPage || _loadingMore || _error != null;
@@ -668,32 +715,37 @@ class _GridScreenState extends ConsumerState<GridScreen> {
         itemBuilder: (_, i) {
           if (i == _rows.length) {
             if (_error != null) {
-              return _Message(text: _error!.message, action: FilledButton(onPressed: _loadMore, child: Text(l.retry)));
+              // The next page failed: the rows stay, a soft Retry under them.
+              return _Message(text: _error!.message, action: SoftButton(onPressed: _loadMore, child: Text(l.retry)));
             }
-            return const Padding(padding: EdgeInsets.all(16), child: Center(child: RefreshRing(size: 28)));
+            return const Shimmer(child: SkeletonCard(margin: EdgeInsets.symmetric(horizontal: 12, vertical: 3)));
           }
           final row = _rows[i];
           final id = row[primaryKey(_params)];
-          return Padding(
+          // Cards shrink away at the top and grow in above the tab bar as the list scrolls.
+          return EdgeFade(
             key: id == null ? ObjectKey(row) : ValueKey('$id'),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: SwipeActions(
-              actions: _swipeActions(row, rowActs),
-              // The card has flown off: drop it here, then refresh in the background.
-              onRemoved: () {
-                setState(() => _rows.remove(row));
-                _reload();
-              },
-              child: NewRowGlow(
-                active: _glowIds.contains('$id'),
-                generation: _glowGen,
-                child: RecordCard(
-                  slots: slots,
-                  row: row,
-                  margin: EdgeInsets.zero,
-                  lookupText: _lookupText,
-                  onTap: () => _tap(row, all),
-                  onMore: rowActs.isEmpty ? null : () => _rowSheet(row, rowActs),
+            endInset: MediaQuery.paddingOf(context).bottom,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+              child: SwipeActions(
+                actions: _swipeActions(row, rowActs),
+                // The card has flown off: drop it here, then refresh in the background.
+                onRemoved: () {
+                  setState(() => _rows.remove(row));
+                  _reload();
+                },
+                child: NewRowGlow(
+                  active: _glowIds.contains('$id'),
+                  generation: _glowGen,
+                  child: RecordCard(
+                    slots: slots,
+                    row: row,
+                    margin: EdgeInsets.zero,
+                    lookupText: _lookupText,
+                    onTap: () => _tap(row, all),
+                    onMore: id == null ? null : () => _shareSheet(row),
+                  ),
                 ),
               ),
             ),
@@ -718,5 +770,25 @@ class _Message extends StatelessWidget {
             if (action != null) ...[const SizedBox(height: 16), action!],
           ]),
         ),
+      );
+}
+
+/// A row's sheet: its title, then the choices as one block of rows.
+class _RowMenu extends StatelessWidget {
+  final String title;
+  final List<Widget> children;
+  const _RowMenu({required this.title, required this.children});
+
+  @override
+  Widget build(BuildContext context) => ListView(
+        padding: EdgeInsets.fromLTRB(16, 0, 16, 24 + MediaQuery.paddingOf(context).bottom),
+        children: [
+          if (title.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
+              child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleLarge),
+            ),
+          RowGroup(children: children),
+        ],
       );
 }

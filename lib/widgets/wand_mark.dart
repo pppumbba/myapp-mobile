@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 
 /// The Wand Studio mark: three descending violet squares on a white tile, as on the launcher icon.
 class WandMark extends StatelessWidget {
@@ -37,4 +38,40 @@ class _MarkPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_MarkPainter oldDelegate) => false;
+}
+
+/// Where tool/build_app.dart puts the app meta's own icon (see json_config.mobile.icon); absent: the Wand mark.
+const appIconAsset = 'assets/app/icon.png';
+
+/// The app's mark: its own icon when the build bundled one, else the Wand mark. Rounded like the
+/// launcher icon; shown on the splash, the error page before sign-in, and the sign-in page.
+class AppMark extends StatelessWidget {
+  final double size;
+  const AppMark({super.key, this.size = 72});
+
+  /// Looked up once: the bundle doesn't change while the app runs.
+  static final Future<bool> _bundled = _has();
+
+  static Future<bool> _has() async {
+    try {
+      await rootBundle.load(appIconAsset);
+      return true;
+    } catch (_) {
+      return false; // not bundled: the Wand mark
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<bool>(
+        future: _bundled,
+        builder: (context, has) => has.data == true
+            ? Semantics(
+                image: true,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(size * 112 / 512),
+                  child: Image.asset(appIconAsset, width: size, height: size, fit: BoxFit.cover),
+                ),
+              )
+            : WandMark(size: size),
+      );
 }

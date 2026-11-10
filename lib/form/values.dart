@@ -1,10 +1,15 @@
+import 'dart:convert';
+
 import '../api/models.dart';
 
 /// A form's values as its inputs hold them: a String, or a bool for boolean fields (as on the web).
+/// A file field holds its files as a JSON list (see [filesOf]).
 typedef Values = Map<String, Object>;
 
-/// Data types this plan leaves out of forms (lines, files, widgets come later).
+/// Data types this plan leaves out of forms (lines, widgets come later; files are [isFileField]).
 const _notInForm = {'detail', 'subgrid', 'singlefile', 'multifile', 'document', 'widget'};
+
+const fileTypes = {'singlefile', 'multifile'};
 
 /// The key a param's value lives under.
 String pathOf(MetaParam p) => p.fieldPath ?? p.paramName;
@@ -12,7 +17,30 @@ String pathOf(MetaParam p) => p.fieldPath ?? p.paramName;
 /// Port of the web `visibleParams`, minus the types this plan leaves out.
 bool isFormField(MetaParam p) => p.isShow && !p.isPrimary && !_notInForm.contains(p.dataType) && p.renderType != 'widget';
 
-List<MetaParam> formFields(List<MetaParam> params) => [...params.where(isFormField)]..sort((a, b) => a.orderNumber.compareTo(b.orderNumber));
+/// A field that takes uploads. Forms have them; detail lines don't (the server doesn't keep files
+/// on lines yet), so [files] is set only for a form's own fields.
+bool isFileField(MetaParam p) => p.isShow && !p.isPrimary && fileTypes.contains(p.dataType);
+
+bool _field(MetaParam p, bool files) => isFormField(p) || (files && isFileField(p));
+
+List<MetaParam> formFields(List<MetaParam> params, {bool files = false}) =>
+    [...params.where((p) => _field(p, files))]..sort((a, b) => a.orderNumber.compareTo(b.orderNumber));
+
+/// The files a file field's value holds: {id, file_name, file_extension, file_size, description, …}.
+List<Map<String, dynamic>> filesOf(Object? value) {
+  if (value is! String || value.isEmpty) return const [];
+  try {
+    final v = jsonDecode(value);
+    if (v is List) return [for (final f in v) if (f is Map && f['id'] != null) Map<String, dynamic>.from(f)];
+  } catch (_) {}
+  return const [];
+}
+
+/// A record's files (a list for multifile, one file or null for singlefile) as a field value.
+String _filesValue(Object? raw) {
+  final list = raw is List ? raw : (raw is Map ? [raw] : const []);
+  return list.isEmpty ? '' : jsonEncode(list);
+}
 
 /// The is_primary param's field path, else `id`.
 String primaryKey(List<MetaParam> params) {
@@ -66,9 +94,14 @@ Values initialValues(
   String? Function(String path)? session,
   Map<String, dynamic>? user,
   DateTime? now,
+  bool files = false,
 }) {
   final out = <String, Object>{};
-  for (final p in params.where(isFormField)) {
+  for (final p in params.where((p) => _field(p, files))) {
+    if (isFileField(p)) {
+      out[pathOf(p)] = _filesValue(record?[pathOf(p)]);
+      continue;
+    }
     final path = pathOf(p);
     Object? raw;
     if (fixed.containsKey(path)) {
@@ -93,11 +126,17 @@ num? _number(String v, {required bool integer}) {
 }
 
 /// Port of the web `toPayload` plus what FormView adds: [fixed] values and `_context`.
-Map<String, dynamic> toPayload(List<MetaParam> params, Values v, {required int? appMetaId, Map<String, String> fixed = const {}}) {
+Map<String, dynamic> toPayload(List<MetaParam> params, Values v, {required int? appMetaId, Map<String, String> fixed = const {}, bool files = false}) {
   final out = <String, dynamic>{};
-  for (final p in params.where(isFormField)) {
+  for (final p in params.where((p) => _field(p, files))) {
     final path = pathOf(p);
     final value = v[path];
+    if (isFileField(p)) {
+      // The files by id, with their descriptions; one or null for a singlefile field.
+      final items = [for (final f in filesOf(value)) {'id': f['id'], 'description': f['description']}];
+      out[path] = p.dataType == 'singlefile' ? items.firstOrNull : items;
+      continue;
+    }
     if (value is bool) {
       out[path] = value;
     } else if (value == null || value == '') {
@@ -148,13 +187,13 @@ List<({String id, String label})>? optionsOf(MetaParam p) {
 }
 
 /// Fields of [params] that block a save: required, empty, and not boolean, autonumber or [hidden].
-List<String> missingRequired(List<MetaParam> params, Values v, Set<String> hidden) => [
-      for (final p in params.where(isFormField))
+List<String> missingRequired(List<MetaParam> params, Values v, Set<String> hidden, {bool files = false}) => [
+      for (final p in params.where((p) => _field(p, files)))
         if (p.isRequired &&
             p.dataType != 'boolean' &&
             autonumberOf(p) == null &&
             !hidden.contains(pathOf(p)) &&
-            (v[pathOf(p)] == null || v[pathOf(p)] == ''))
+            (isFileField(p) ? filesOf(v[pathOf(p)]).isEmpty : (v[pathOf(p)] == null || v[pathOf(p)] == '')))
           pathOf(p),
     ];
 

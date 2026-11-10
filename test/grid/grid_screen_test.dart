@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:wand_mobile/widgets/pill_buttons.dart';
 import 'package:wand_mobile/api/client.dart';
 import 'package:wand_mobile/api/models.dart';
 import 'package:wand_mobile/auth/session.dart';
@@ -208,7 +209,7 @@ void main() {
   testWidgets("delete calls DELETE on the action's form meta", (tester) async {
     final r = routes()..['DELETE /api/metas/129/data/7'] = (_) => (200, {'ok': true});
     final a = await pumpGrid(tester, r);
-    await tester.longPress(find.byType(RecordCard).first);
+    await tester.drag(find.byType(RecordCard).first, const Offset(-260, 0)); // the row's actions are on swipe
     await tester.pumpAndSettle();
     expect(find.text('Complete'), findsOneWidget);
     await tester.tap(find.text('Delete'));
@@ -231,14 +232,14 @@ void main() {
         return (200, {'affected': 1, 'statements': [1], 'dry_run': b['dry_run']});
       };
     final a = await pumpGrid(tester, r);
-    await tester.longPress(find.byType(RecordCard).first);
+    await tester.drag(find.byType(RecordCard).first, const Offset(-260, 0)); // the row's actions are on swipe
     await tester.pumpAndSettle();
     await tester.tap(find.text('Complete'));
     await tester.pumpAndSettle();
     expect(find.widgetWithText(TextField, '7'), findsOneWidget);
     final run = find.widgetWithText(FilledButton, 'Run');
     expect(tester.widget<FilledButton>(run).onPressed, isNull);
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Check'));
+    await tester.tap(find.widgetWithText(SoftButton, 'Check'));
     await tester.pumpAndSettle();
     expect(bodies.single, {
       'params': {'work_order_id': '7'},
@@ -246,10 +247,13 @@ void main() {
     });
     expect(find.text('This will change 1 rows. Run it?'), findsOneWidget);
     await tester.tap(run);
-    await tester.pumpAndSettle();
+    // Like a form save: the sheet closes and a toast says what ran.
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
     expect(bodies.last['dry_run'], false);
     expect(find.text('Done: 1 rows changed.'), findsOneWidget);
-    await tester.tap(find.text('Close'));
+    expect(find.text('Check'), findsNothing);
     await tester.pumpAndSettle();
     expect(dataCalls(a), hasLength(2));
   });
@@ -260,11 +264,11 @@ void main() {
       ..['GET /api/metas/130/params'] = ((_) => (200, [gp(1, 'work_order_id', 'Work order id', type: 'integer')]))
       ..['POST /api/metas/130/run'] = (o) => (200, {'affected': 0, 'statements': [0], 'dry_run': true});
     await pumpGrid(tester, r);
-    await tester.longPress(find.byType(RecordCard).first);
+    await tester.drag(find.byType(RecordCard).first, const Offset(-260, 0)); // the row's actions are on swipe
     await tester.pumpAndSettle();
     await tester.tap(find.text('Complete'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Check'));
+    await tester.tap(find.widgetWithText(SoftButton, 'Check'));
     await tester.pumpAndSettle();
     expect(find.text('Nothing to change: no rows match.'), findsOneWidget);
     expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Run')).onPressed, isNull);
@@ -272,7 +276,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Nothing to change: no rows match.'), findsNothing);
     // The dry run was a write: the lookup cache was cleared, yet the card never shows the raw id.
-    await tester.tap(find.text('Cancel'));
+    Navigator.of(tester.element(find.text('Check'))).pop();
     await tester.pumpAndSettle();
     expect(find.byWidgetPredicate((w) => w is Semantics && w.properties.label == 'Asset: Pump 1'), findsOneWidget);
     expect(find.textContaining('#5'), findsNothing);
@@ -367,11 +371,11 @@ void stageQueryGuardTests() {
         return (200, {'affected': 1, 'statements': [1], 'dry_run': true});
       };
     await pumpGrid(tester, r);
-    await tester.longPress(find.byType(RecordCard).first);
+    await tester.drag(find.byType(RecordCard).first, const Offset(-260, 0)); // the row's actions are on swipe
     await tester.pumpAndSettle();
     await tester.tap(find.text('Complete'));
     await tester.pumpAndSettle();
-    final check = find.widgetWithText(OutlinedButton, 'Check');
+    final check = find.widgetWithText(SoftButton, 'Check');
     await tester.tap(check);
     await tester.tap(check);
     await tester.pumpAndSettle();
@@ -406,5 +410,14 @@ void lookupChipTests() {
     await tester.pumpAndSettle();
     expect(find.widgetWithText(InputChip, 'Asset: Boiler'), findsOneWidget);
     expect(find.textContaining('…'), findsNothing);
+  });
+
+  testWidgets('long-press on a row offers only Share to chat', (tester) async {
+    await pumpGrid(tester, routes());
+    await tester.longPress(find.byType(RecordCard).first);
+    await tester.pumpAndSettle();
+    expect(find.text('Share to chat'), findsOneWidget);
+    expect(find.text('Complete'), findsNothing);
+    expect(find.text('Delete'), findsNothing);
   });
 }

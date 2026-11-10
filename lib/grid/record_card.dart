@@ -6,8 +6,9 @@ import '../nav/icons.dart';
 import 'card_slots.dart';
 import 'cells.dart';
 
-/// One record as a card: title with the status chip at its right, subtitle, then one row per value with
-/// the column's icon in front (the column name is the icon's tooltip). Long-press opens the row's actions.
+/// One record as a compact card: title with the status chip at its right, subtitle, then the values side
+/// by side, each with the column's icon in front (the column name is the icon's tooltip). Empty values
+/// are left out. Long-press: [onMore] (sharing the row).
 class RecordCard extends StatelessWidget {
   final CardSlots slots;
   final Map<String, dynamic> row;
@@ -33,21 +34,18 @@ class RecordCard extends StatelessWidget {
     String text(MetaParam p) => cellText(p, row, lookupText: lookupText, l10n: l10n);
 
     Widget line(String s, TextStyle? style) => Text(s, maxLines: 1, overflow: TextOverflow.ellipsis, style: style);
-    Widget labelled(MetaParam p) {
-      final value = text(p);
-      return Padding(
-        padding: const EdgeInsets.only(top: 4),
-        child: Semantics(
+    Widget labelled(MetaParam p, String value, double maxWidth) => Semantics(
           label: '${p.label}: $value',
           excludeSemantics: true,
-          child: Row(children: [
-            Tooltip(message: p.label, child: Icon(paramIcon(p), size: 16, color: theme.colorScheme.onSurfaceVariant)),
-            const SizedBox(width: 8),
-            Expanded(child: line(value, theme.textTheme.bodySmall)),
-          ]),
-        ),
-      );
-    }
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxWidth),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Tooltip(message: p.label, child: Icon(paramIcon(p), size: 14, color: theme.colorScheme.onSurfaceVariant)),
+              const SizedBox(width: 5),
+              Flexible(child: line(value, theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant))),
+            ]),
+          ),
+        );
 
     final title = slots.title == null ? '' : text(slots.title!);
     final subtitle = slots.subtitle == null ? '' : text(slots.subtitle!);
@@ -56,6 +54,10 @@ class RecordCard extends StatelessWidget {
     // Uploaded-file images (JSON file values, /contents/{id}, need auth) are deferred to plan 5 (files); only URLs show now.
     final imageUrl = imageValue is String && RegExp(r"^https?://", caseSensitive: false).hasMatch(imageValue) ? imageValue : null;
     final options = slots.badge == null ? const <String>[] : _options(slots.badge!);
+    final values = [
+      for (final p in [...slots.body, ...slots.footer])
+        if (text(p) case final v when v.isNotEmpty) (p, v),
+    ];
 
     return Card(
       margin: margin,
@@ -64,7 +66,7 @@ class RecordCard extends StatelessWidget {
         onTap: onTap,
         onLongPress: onMore,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
+          padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -73,7 +75,7 @@ class RecordCard extends StatelessWidget {
                   padding: const EdgeInsets.only(right: 12),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.network(imageUrl, width: 48, height: 48, fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox(width: 48, height: 48)),
+                    child: Image.network(imageUrl, width: 40, height: 40, fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox(width: 40, height: 40)),
                   ),
                 ),
               Expanded(
@@ -82,17 +84,23 @@ class RecordCard extends StatelessWidget {
                   children: [
                     if (title.isNotEmpty || badge.isNotEmpty)
                       Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Expanded(child: line(title, theme.textTheme.titleMedium)),
+                        Expanded(child: line(title, theme.textTheme.titleSmall?.copyWith(fontSize: 15, fontWeight: FontWeight.w600))),
                         if (badge.isNotEmpty)
                           Padding(
-                            padding: const EdgeInsets.only(left: 8, top: 2),
+                            padding: const EdgeInsets.only(left: 8, top: 1),
                             child: _Chip(text: badge, color: statusColor(badge, options, scheme: theme.colorScheme)),
                           ),
                       ]),
-                    if (subtitle.isNotEmpty) line(subtitle, theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-                    if (slots.body.isNotEmpty || slots.footer.isNotEmpty) const SizedBox(height: 4),
-                    for (final p in slots.body) labelled(p),
-                    for (final p in slots.footer) labelled(p),
+                    if (subtitle.isNotEmpty) line(subtitle, theme.textTheme.bodySmall?.copyWith(fontSize: 13, color: theme.colorScheme.onSurfaceVariant)),
+                    if (values.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 5),
+                        child: LayoutBuilder(
+                          builder: (_, box) => Wrap(spacing: 12, runSpacing: 3, children: [
+                            for (final (p, v) in values) labelled(p, v, box.maxWidth),
+                          ]),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -117,9 +125,9 @@ class _Chip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         constraints: const BoxConstraints(maxWidth: 140),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
         decoration: BoxDecoration(color: color.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(12)),
-        child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
+        child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: color, fontSize: 11.5, fontWeight: FontWeight.w600)),
       );
 }
 

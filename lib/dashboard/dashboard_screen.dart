@@ -6,11 +6,13 @@ import 'package:intl/intl.dart';
 
 import '../api/client.dart';
 import '../api/models.dart';
-import '../auth/session.dart' show apiClientProvider;
+import '../auth/session.dart' show apiClientProvider, sessionScopeProvider;
 import '../l10n/app_localizations.dart';
 import '../meta/defs.dart';
 import '../nav/pill_bar.dart' show pillCyan, pillViolet;
 import '../widgets/pull_refresh.dart';
+import '../widgets/edge_fade.dart';
+import '../widgets/skeleton.dart';
 
 /// Series colours, in order: violet, cyan, pink, gold, mint, lilac.
 const chartColors = [pillViolet, pillCyan, Color(0xFFFF5CA8), Color(0xFFFFD166), Color(0xFF3DDBB0), Color(0xFFB6A8FF)];
@@ -56,6 +58,7 @@ class ChartData {
 }
 
 final chartProvider = FutureProvider.family<ChartData, int>(retry: noRetry, (ref, id) async {
+  ref.watch(sessionScopeProvider);
   final r = await ref.read(apiClientProvider).get<dynamic>('/metas/$id/chart');
   return ChartData.fromJson(Map<String, dynamic>.from(r as Map));
 });
@@ -110,7 +113,7 @@ class DashboardScreen extends ConsumerWidget {
         padding: EdgeInsets.fromLTRB(16, 12, 16, 24 + MediaQuery.paddingOf(context).bottom),
         itemCount: blocks.length,
         separatorBuilder: (_, _) => const SizedBox(height: 12),
-        itemBuilder: (_, i) => blocks[i],
+        itemBuilder: (_, i) => EdgeFade(endInset: MediaQuery.paddingOf(context).bottom, child: blocks[i]),
       ),
     );
   }
@@ -130,11 +133,14 @@ class ChartCard extends ConsumerWidget {
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+        padding: kpi ? const EdgeInsets.fromLTRB(14, 10, 14, 12) : const EdgeInsets.fromLTRB(16, 14, 16, 16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-          Text(name, maxLines: kpi ? 2 : 1, overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-          const SizedBox(height: 10),
+          if (name.isEmpty)
+            const Shimmer(child: SkeletonBox(width: 110, height: 12))
+          else
+            Text(name, maxLines: kpi ? 2 : 1, overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+          SizedBox(height: kpi ? 4 : 10),
           switch (data) {
             AsyncValue(:final value?) => _chart(value),
             AsyncValue(:final error?) => Row(children: [
@@ -148,7 +154,7 @@ class ChartCard extends ConsumerWidget {
                   icon: const Icon(Icons.refresh),
                 ),
               ]),
-            _ => const SizedBox(height: 36, child: Center(child: RefreshRing(size: 28))),
+            _ => const ChartSkeleton(),
           },
         ]),
       ),
@@ -185,10 +191,10 @@ class _Kpi extends StatelessWidget {
         fit: BoxFit.scaleDown,
         alignment: Alignment.centerLeft,
         child: Text(chartNumber(v, d.format, short: true),
-            style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800, fontFeatures: const [FontFeature.tabularFigures()])),
+            style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, fontFeatures: const [FontFeature.tabularFigures()])),
       ),
       if (change != null) ...[
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
         Text('${change >= 0 ? '▲' : '▼'} ${change.abs().toStringAsFixed(1)}%',
             style: theme.textTheme.bodySmall?.copyWith(color: change >= 0 ? const Color(0xFF3DDBB0) : const Color(0xFFFF5CA8))),
       ],

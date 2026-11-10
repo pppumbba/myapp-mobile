@@ -11,12 +11,9 @@ class MetaDef {
   MetaDef(this.meta, this.params);
 }
 
-/// The signed-in user id: cached definitions live until it changes (sign-out, another user).
-final _definitionsScopeProvider = Provider<Object?>((ref) => ref.watch(sessionProvider.select((s) => s.user?['id'])));
-
-/// Cached until sign-out or a manual `ref.invalidate(metaDefProvider(id))`.
+/// Cached until the session scope changes (sign-out, customer, language) or a manual `ref.invalidate(metaDefProvider(id))`.
 final metaDefProvider = FutureProvider.family<MetaDef, int>(retry: noRetry, (ref, id) async {
-  ref.watch(_definitionsScopeProvider);
+  ref.watch(sessionScopeProvider);
   final client = ref.read(apiClientProvider);
   final r = await Future.wait<dynamic>([
     client.get<dynamic>('/metas/$id', query: {'translated': '1'}),
@@ -29,7 +26,7 @@ final metaDefProvider = FutureProvider.family<MetaDef, int>(retry: noRetry, (ref
 });
 
 final actionsProvider = FutureProvider.family<List<MetaAction>, int>(retry: noRetry, (ref, id) async {
-  ref.watch(_definitionsScopeProvider);
+  ref.watch(sessionScopeProvider);
   final r = await ref.read(apiClientProvider).get<dynamic>(
     '/metas/$id/actions',
     query: {'effective': '1', 'translated': '1'},

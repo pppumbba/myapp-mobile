@@ -104,6 +104,7 @@
   "deleteForGood": "It will be removed for good.",
   "justNow": "now",
   "today": "Today",
+  "now": "Now",
   "tomorrow": "Tomorrow",
   "yesterday": "Yesterday",
   "inDays": "In {count} days",
@@ -121,5 +122,105 @@
         "type": "int"
       }
     }
-  }
+  },
+  "personalInfo": "Personal info",
+  "personalInfoNote": "How you appear in the app, and the email you log in with.",
+  "name": "Name",
+  "saveChanges": "Save changes",
+  "appearance": "Appearance",
+  "themeSystem": "System",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "language": "Language",
+  "languageNote": "The language of screen names, field labels, buttons and statuses, where they have been translated.",
+  "languageAsPhone": "As my phone is",
+  "customers": "Customers",
+  "customersNote": "The companies you work in. Each has its own apps, people and data.",
+  "openNow": "Open now",
+  "admin": "Admin",
+  "currentPassword": "Current password",
+  "newPassword": "New password",
+  "confirmPassword": "Confirm new password",
+  "passwordHint": "At least 8 characters.",
+  "passwordsDontMatch": "The passwords don't match.",
+  "changePassword": "Change password",
+  "passwordChanged": "Password changed",
+  "passwordNote": "Changing it signs you out everywhere else; you stay signed in here.",
+  "choose": "Choose",
+  "edit": "Edit",
+  "addLine": "Add line",
+  "noLines": "No lines yet",
+  "total": "Total",
+  "removeLine": "Remove this line?",
+  "newLine": "New: {name}",
+  "@newLine": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "done": "Done",
+  "addPicked": "Add {count}",
+  "@addPicked": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pickToWorkOn": "Pick a {name} to work on",
+  "@pickToWorkOn": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "recordNotLoaded": "This record could not be loaded.",
+  "workspaceNoSections": "This workspace has no sections yet.",
+  "workspaceNeedsForm": "This workspace needs a form for its record.",
+  "fieldEnter": "Enter",
+  "inbox": "Inbox",
+  "chats": "Chats",
+  "newChat": "New chat",
+  "noChats": "No chats yet. Start one with +.",
+  "messageHint": "Message",
+  "seen": "Seen",
+  "typingNow": "typing…",
+  "you": "You",
+  "findPeople": "Find people",
+  "sendFailed": "Could not send. Try again.",
+  "send": "Send",
+  "delivered": "Delivered",
+  "noPeople": "No one else is here yet.",
+  "noConnection": "No connection",
+  "couldNotLoad": "Couldn't load this",
+  "addFile": "Add",
+  "replaceFile": "Replace",
+  "removeFile": "Remove file",
+  "noFiles": "No files",
+  "takePhoto": "Take photo",
+  "photoLibrary": "Photo library",
+  "browseFiles": "Browse files",
+  "upTo": "up to {size}",
+  "@upTo": {"placeholders": {"size": {"type": "String"}}},
+  "fileTypeNotAllowed": "{name} can't be added here. Allowed: {types}",
+  "@fileTypeNotAllowed": {"placeholders": {"name": {"type": "String"}, "types": {"type": "String"}}},
+  "fileTooBig": "{name} is too big. The limit is {size}.",
+  "@fileTooBig": {"placeholders": {"name": {"type": "String"}, "size": {"type": "String"}}},
+  "fileLimit": "This field takes at most {count} files.",
+  "@fileLimit": {"placeholders": {"count": {"type": "int"}}},
+  "couldNotPick": "Couldn't get the file. Check the app's photo and file permissions.",
+  "noAppToOpen": "No app on this phone opens this kind of file.",
+  "filesUploading": "Wait for the files to finish uploading.",
+  "shareToChat": "Share to chat",
+  "addNote": "Add a note (optional)",
+  "people": "People",
+  "sharedWith": "Shared with {name}",
+  "@sharedWith": {"placeholders": {"name": {"type": "String"}}},
+  "noPeopleFound": "No one matches “{query}”.",
+  "@noPeopleFound": {"placeholders": {"query": {"type": "String"}}},
+  "dragPickHint": "Tip: hold a card and slide to pick several",
+  "@fieldEnter": {"description": "Placeholder on the right of an empty text row in a form"}
 }

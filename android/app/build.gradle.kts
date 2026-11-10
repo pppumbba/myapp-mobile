@@ -24,6 +24,8 @@ android {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = (appJson["appId"] as String?) ?: "mn.wand.mobile"
         manifestPlaceholders["appName"] = (appJson["appName"] as String?) ?: "Wand"
+        // The app meta's own icon, which tool/build_app.dart writes to build/app_icon/res; else the Wand mark.
+        manifestPlaceholders["appIcon"] = if (appJson["icon"] == true) "@mipmap/ic_app" else "@mipmap/ic_launcher"
         // Google sign-in comes back on <package id>://google-auth (a scheme may not hold _).
         manifestPlaceholders["authScheme"] = ((appJson["appId"] as String?) ?: "mn.wand.mobile").replace('_', '-')
         // You can update the following values to match your application needs.
@@ -37,6 +39,8 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
+
+    sourceSets["main"].res.srcDir(rootProject.file("../build/app_icon/res"))
 
     buildTypes {
         release {

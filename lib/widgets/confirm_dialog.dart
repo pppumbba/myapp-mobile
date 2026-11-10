@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../nav/pill_bar.dart' show pillViolet;
 import 'pill_buttons.dart';
+import 'tones.dart';
+import 'bin_icon.dart';
 
 const _pink = Color(0xFFFF5CA8);
 
@@ -130,7 +132,7 @@ class _ConfirmCard extends StatelessWidget {
             shadowColor: Colors.black,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(24),
-              side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+              side: BorderSide(color: scheme.hairline),
             ),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
@@ -140,7 +142,8 @@ class _ConfirmCard extends StatelessWidget {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(color: accent.withValues(alpha: 0.18), shape: BoxShape.circle),
-                    child: Icon(destructive ? Icons.delete_outline : Icons.help_outline, size: 20, color: accent),
+                    alignment: Alignment.center,
+                    child: destructive ? BinIcon(size: 20, color: accent) : Icon(Icons.help_outline, size: 20, color: accent),
                   ),
                   const SizedBox(width: 12),
                   Expanded(child: Text(title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700))),

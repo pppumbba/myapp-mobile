@@ -1,15 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../l10n/app_localizations.dart';
 import '../nav/pill_bar.dart' show pillCyan, pillViolet;
 import 'confirm_dialog.dart' show PopInRoute;
 import 'pill_buttons.dart';
+import 'tones.dart' show appFont;
 
-// The Violet Datepicker's night colours.
-const _stage = Color(0xFF13131C), _row = Color(0xFF1C1B2B), _hover = Color(0xFF26253A);
-const _ink = Color(0xFFF4F4F8), _ink2 = Color(0xFFC4C2E0), _mute = Color(0xFF77758F), _mute2 = Color(0xFF6D6B88);
-const _ring = Color(0xFF38C6FF), _ice = Color(0xFF9FE3FF), _glow = Color(0x8C6E5BFF);
+/// The Violet Datepicker's night colours, and a daytime set for the light theme.
+class _Palette {
+  final Color stage, row, hover, ink, ink2, mute, mute2, ice;
+  const _Palette({required this.stage, required this.row, required this.hover, required this.ink, required this.ink2, required this.mute, required this.mute2, required this.ice});
+
+  static const night = _Palette(
+    stage: Color(0xFF13131C), row: Color(0xFF1C1B2B), hover: Color(0xFF26253A),
+    ink: Color(0xFFF4F4F8), ink2: Color(0xFFC4C2E0), mute: Color(0xFF77758F), mute2: Color(0xFF6D6B88),
+    ice: Color(0xFF9FE3FF),
+  );
+  static const day = _Palette(
+    stage: Color(0xFFFFFFFF), row: Color(0xFFF1F0F7), hover: Color(0xFFE6E5F0),
+    ink: Color(0xFF17161F), ink2: Color(0xFF3A3852), mute: Color(0xFF7A7892), mute2: Color(0xFF8E8CA6),
+    ice: Color(0xFF0B86C8),
+  );
+
+  static _Palette of(BuildContext context) => Theme.of(context).brightness == Brightness.dark ? night : day;
+}
+
+const _ring = Color(0xFF38C6FF), _glow = Color(0x8C6E5BFF);
 const _gradient = LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [pillViolet, pillCyan]);
 
 /// Presses spring back past full size.
@@ -78,18 +96,19 @@ class _VioletDatePickerState extends State<VioletDatePicker> {
 
   @override
   Widget build(BuildContext context) {
+    final c = _Palette.of(context);
     final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 380),
         child: Material(
-          color: _stage,
+          color: c.stage,
           elevation: 16,
           shadowColor: Colors.black,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
-            side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+            side: BorderSide(color: c.ink.withValues(alpha: 0.08)),
           ),
           child: Padding(
             padding: const EdgeInsets.all(12),
@@ -180,11 +199,12 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = _Palette.of(context);
     final m = MaterialLocalizations.of(context);
     return Container(
       constraints: const BoxConstraints(minHeight: 60),
       padding: const EdgeInsets.only(left: 14, right: 6),
-      decoration: BoxDecoration(color: _row, borderRadius: BorderRadius.circular(13)),
+      decoration: BoxDecoration(color: c.row, borderRadius: BorderRadius.circular(13)),
       child: Row(children: [
         Expanded(
           child: Semantics(
@@ -192,10 +212,10 @@ class _Header extends StatelessWidget {
             liveRegion: true,
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(_capitalized(DateFormat.MMMM(locale).format(month)),
-                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: _ink, height: 1.2)),
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: c.ink, height: 1.2)),
               Text(DateFormat.y(locale).format(month),
-                  style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w500, color: _mute, height: 1.2, fontFeatures: [FontFeature.tabularFigures()])),
+                  style: TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w500, color: c.mute, height: 1.2, fontFeatures: [FontFeature.tabularFigures()])),
             ]),
           ),
         ),
@@ -214,13 +234,14 @@ class _RoundButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = _Palette.of(context);
     final button = IconButton(
       onPressed: onPressed,
       tooltip: tooltip,
       icon: Icon(icon, size: 24),
-      color: _ink2,
-      disabledColor: _mute2.withValues(alpha: 0.5),
-      highlightColor: _hover,
+      color: c.ink2,
+      disabledColor: c.mute2.withValues(alpha: 0.5),
+      highlightColor: c.hover,
       style: IconButton.styleFrom(fixedSize: const Size(44, 44)),
     );
     return onPressed == null ? button : _Springy(child: button);
@@ -233,6 +254,7 @@ class _Weekdays extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = _Palette.of(context);
     final f = DateFormat.E(locale);
     // 1 January 2024 was a Monday.
     return ExcludeSemantics(
@@ -243,7 +265,7 @@ class _Weekdays extends StatelessWidget {
             Expanded(
               child: Text(f.format(DateTime(2024, 1, 1 + i)),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: _mute2, letterSpacing: 0.25)),
+                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: c.mute2, letterSpacing: 0.25)),
             ),
         ]),
       ),
@@ -310,7 +332,8 @@ class _Day extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isPicked ? Colors.white : (isToday ? _ink : (isOutside ? _mute2.withValues(alpha: 0.7) : _ink2));
+    final c = _Palette.of(context);
+    final color = isPicked ? Colors.white : (isToday ? c.ink : (isOutside ? c.mute2.withValues(alpha: 0.7) : c.ink2));
     return Semantics(
       button: true,
       selected: isPicked,
@@ -392,6 +415,225 @@ class _SpringyState extends State<_Springy> {
   }
 }
 
+/// Asks for a time of day (24-hour), starting on [initial] (now when null). Null when cancelled.
+Future<TimeOfDay?> showVioletTimePicker(BuildContext context, {TimeOfDay? initial}) =>
+    Navigator.of(context, rootNavigator: true).push<TimeOfDay>(PopInRoute<TimeOfDay>(
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      cardKey: const ValueKey('time-card'),
+      builder: (_) => VioletTimePicker(initial: initial),
+    ));
+
+/// The date picker's card for a time: the picked time large with Now, hour and minute wheels
+/// that loop around a violet → cyan pill, then Cancel and Apply.
+class VioletTimePicker extends StatefulWidget {
+  final TimeOfDay? initial;
+  const VioletTimePicker({super.key, this.initial});
+
+  @override
+  State<VioletTimePicker> createState() => _VioletTimePickerState();
+}
+
+class _VioletTimePickerState extends State<VioletTimePicker> {
+  late int _hour, _minute;
+  late final FixedExtentScrollController _hours, _minutes;
+
+  @override
+  void initState() {
+    super.initState();
+    final t = widget.initial ?? TimeOfDay.now();
+    _hour = t.hour;
+    _minute = t.minute;
+    _hours = FixedExtentScrollController(initialItem: _hour);
+    _minutes = FixedExtentScrollController(initialItem: _minute);
+  }
+
+  @override
+  void dispose() {
+    _hours.dispose();
+    _minutes.dispose();
+    super.dispose();
+  }
+
+  /// Rolls a looping wheel the short way round to [value].
+  void _roll(FixedExtentScrollController c, int value, int count) {
+    final at = c.selectedItem;
+    var step = (value - at % count) % count;
+    if (step > count / 2) step -= count;
+    if (step == 0) return;
+    final still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    if (still) {
+      c.jumpToItem(at + step);
+    } else {
+      c.animateToItem(at + step, duration: const Duration(milliseconds: 360), curve: Curves.easeOutCubic);
+    }
+  }
+
+  void _now() {
+    final t = TimeOfDay.now();
+    _roll(_hours, t.hour, 24);
+    _roll(_minutes, t.minute, 60);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = _Palette.of(context);
+    final l = AppLocalizations.of(context);
+    final m = MaterialLocalizations.of(context);
+    final now = TimeOfDay.now();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 380),
+        child: Material(
+          color: c.stage,
+          elevation: 16,
+          shadowColor: Colors.black,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: BorderSide(color: c.ink.withValues(alpha: 0.08)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Container(
+                constraints: const BoxConstraints(minHeight: 60),
+                padding: const EdgeInsets.only(left: 14, right: 6),
+                decoration: BoxDecoration(color: c.row, borderRadius: BorderRadius.circular(13)),
+                child: Row(children: [
+                  Expanded(
+                    child: Semantics(
+                      header: true,
+                      liveRegion: true,
+                      child: Text('${_two(_hour)}:${_two(_minute)}',
+                          style: TextStyle(
+                              fontSize: 26, fontWeight: FontWeight.w800, color: c.ink, fontFeatures: [FontFeature.tabularFigures()])),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: now.hour == _hour && now.minute == _minute ? null : _now,
+                    style: TextButton.styleFrom(
+                      foregroundColor: c.ice,
+                      disabledForegroundColor: c.mute2,
+                      overlayColor: c.hover,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      textStyle: const TextStyle(fontFamily: appFont, fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                    child: Text(l.now),
+                  ),
+                ]),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 5 * _TimeWheel.extent,
+                child: Stack(alignment: Alignment.center, children: [
+                  // The pill the picked hour and minute sit on.
+                  Container(
+                    height: _TimeWheel.extent,
+                    margin: const EdgeInsets.symmetric(horizontal: 36),
+                    decoration: BoxDecoration(
+                      gradient: _gradient,
+                      borderRadius: BorderRadius.circular(_TimeWheel.extent / 2),
+                      boxShadow: const [BoxShadow(color: _glow, blurRadius: 14)],
+                    ),
+                  ),
+                  Row(children: [
+                    Expanded(
+                      child: _TimeWheel(
+                        key: const ValueKey('hour-wheel'),
+                        label: m.timePickerHourLabel,
+                        controller: _hours,
+                        count: 24,
+                        picked: _hour,
+                        onChanged: (v) => setState(() => _hour = v),
+                      ),
+                    ),
+                    const ExcludeSemantics(
+                      child: Text(':', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white)),
+                    ),
+                    Expanded(
+                      child: _TimeWheel(
+                        key: const ValueKey('minute-wheel'),
+                        label: m.timePickerMinuteLabel,
+                        controller: _minutes,
+                        count: 60,
+                        picked: _minute,
+                        onChanged: (v) => setState(() => _minute = v),
+                      ),
+                    ),
+                  ]),
+                ]),
+              ),
+              const SizedBox(height: 12),
+              Row(children: [
+                Expanded(child: SoftButton(onPressed: () => Navigator.of(context).pop(), child: Text(l.cancel))),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: GradientButton(
+                    onPressed: () => Navigator.of(context).pop(TimeOfDay(hour: _hour, minute: _minute)),
+                    child: Text(l.apply),
+                  ),
+                ),
+              ]),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+String _two(int n) => n.toString().padLeft(2, '0');
+
+/// One looping column of two-digit numbers; the one on the pill is white and bold, the rest fade
+/// with distance. A light tick on every change.
+class _TimeWheel extends StatelessWidget {
+  static const extent = 44.0;
+  final String label;
+  final FixedExtentScrollController controller;
+  final int count, picked;
+  final ValueChanged<int> onChanged;
+  const _TimeWheel({
+    super.key,
+    required this.label,
+    required this.controller,
+    required this.count,
+    required this.picked,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = _Palette.of(context);
+    return Semantics(
+      label: label,
+      value: _two(picked),
+      child: ListWheelScrollView.useDelegate(
+        controller: controller,
+        itemExtent: extent,
+        diameterRatio: 1.6,
+        perspective: 0.004,
+        physics: const FixedExtentScrollPhysics(),
+        onSelectedItemChanged: (i) {
+          HapticFeedback.selectionClick();
+          onChanged(i % count);
+        },
+        childDelegate: ListWheelChildLoopingListDelegate(children: [
+          for (var v = 0; v < count; v++)
+            Center(
+              child: Text(_two(v),
+                  style: TextStyle(
+                    fontSize: v == picked ? 20 : 17,
+                    fontWeight: v == picked ? FontWeight.w800 : FontWeight.w500,
+                    color: v == picked ? Colors.white : c.ink2,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  )),
+            ),
+        ]),
+      ),
+    );
+  }
+}
+
 /// The picked day in a violet → cyan circle, spelled out, how far it is from today, and Today.
 class _Summary extends StatelessWidget {
   final DateTime picked, today;
@@ -401,11 +643,12 @@ class _Summary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = _Palette.of(context);
     final l = AppLocalizations.of(context);
     return Container(
       constraints: const BoxConstraints(minHeight: 60),
       padding: const EdgeInsets.only(left: 14, right: 6),
-      decoration: BoxDecoration(color: _row, borderRadius: BorderRadius.circular(13)),
+      decoration: BoxDecoration(color: c.row, borderRadius: BorderRadius.circular(13)),
       child: Row(children: [
         Container(
           width: 38,
@@ -426,20 +669,20 @@ class _Summary extends StatelessWidget {
               Text(_capitalized(DateFormat.MMMMEEEEd(locale).format(picked)),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: _ink2, height: 1.25)),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: c.ink2, height: 1.25)),
               Text('${picked.year} · ${_fromToday(l, picked, today)}',
-                  style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500, color: _mute, height: 1.25)),
+                  style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500, color: c.mute, height: 1.25)),
             ]),
           ),
         ),
         TextButton(
           onPressed: onToday,
           style: TextButton.styleFrom(
-            foregroundColor: _ice,
-            disabledForegroundColor: _mute2,
-            overlayColor: _hover,
+            foregroundColor: c.ice,
+            disabledForegroundColor: c.mute2,
+            overlayColor: c.hover,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            textStyle: const TextStyle(fontFamily: appFont, fontSize: 13, fontWeight: FontWeight.w600),
           ),
           child: Text(l.today),
         ),

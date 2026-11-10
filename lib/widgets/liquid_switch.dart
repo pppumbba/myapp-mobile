@@ -81,7 +81,13 @@ class _LiquidSwitchState extends State<LiquidSwitch> with SingleTickerProviderSt
           opacity: enabled ? 1 : 0.5,
           child: CustomPaint(
             size: LiquidSwitch.size,
-            painter: LiquidSwitchPainter(p: p, speed: speed, trail1: _at(_now - 0.045), trail2: _at(_now - 0.095)),
+            painter: LiquidSwitchPainter(
+              p: p,
+              speed: speed,
+              trail1: _at(_now - 0.045),
+              trail2: _at(_now - 0.095),
+              dark: Theme.of(context).brightness == Brightness.dark,
+            ),
           ),
         ),
       ),
@@ -93,7 +99,9 @@ class _LiquidSwitchState extends State<LiquidSwitch> with SingleTickerProviderSt
 /// two droplets' on-amounts. Drawn on the spec's 236×118 track, scaled to the size.
 class LiquidSwitchPainter extends CustomPainter {
   final double p, speed, trail1, trail2;
-  LiquidSwitchPainter({required this.p, required this.speed, required this.trail1, required this.trail2});
+  /// The off track: deep on the dark theme, pale on the light one.
+  final bool dark;
+  LiquidSwitchPainter({required this.p, required this.speed, required this.trail1, required this.trail2, this.dark = true});
 
   static const _tw = 236.0, _th = 118.0;
   static const _threshold = ColorFilter.matrix(<double>[
@@ -119,7 +127,7 @@ class LiquidSwitchPainter extends CustomPainter {
         ..color = Colors.white.withValues(alpha: 0.75 * on)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10.6));
     }
-    canvas.drawRRect(track, Paint()..color = const Color(0xFF262534));
+    canvas.drawRRect(track, Paint()..color = dark ? const Color(0xFF262534) : const Color(0xFFDCDBE8));
     if (on > 0) {
       canvas.saveLayer(null, Paint()..color = Colors.white.withValues(alpha: on));
       canvas.drawRRect(track, Paint()..shader = gradient);
@@ -128,7 +136,7 @@ class LiquidSwitchPainter extends CustomPainter {
     canvas.drawRRect(track.deflate(0.5 / k), Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1 / k
-      ..color = const Color(0x17FFFFFF));
+      ..color = dark ? const Color(0x17FFFFFF) : const Color(0x14000000));
 
     // Knob pose: stretched with speed, squashed past the ends, kept 14px from either end.
     final s = math.min(speed.abs() * 0.055, 0.55);
@@ -178,5 +186,6 @@ class LiquidSwitchPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(LiquidSwitchPainter old) => old.p != p || old.speed != speed || old.trail1 != trail1 || old.trail2 != trail2;
+  bool shouldRepaint(LiquidSwitchPainter old) =>
+      old.p != p || old.speed != speed || old.trail1 != trail1 || old.trail2 != trail2 || old.dark != dark;
 }

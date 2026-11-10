@@ -7,6 +7,7 @@ import '../l10n/app_localizations.dart';
 import 'lookup.dart';
 import 'lookup_page.dart';
 import 'values.dart';
+import '../nav/pill_bar.dart' show pillCyan;
 import '../widgets/glow_border.dart';
 import '../widgets/liquid_switch.dart';
 import '../widgets/snap_sheet.dart';
@@ -29,6 +30,8 @@ _Kind _kindOf(MetaParam p) {
 
 /// One form field, full width. Values are Strings, or a bool for boolean fields.
 /// [optional] drops the required mark (e.g. an autonumber); [hint] shows under the field.
+/// [row]: a row of a [RowGroup] (label left, value right, like the account page) instead of an
+/// outlined box; forms and line pages use rows, the filter and stage query sheets boxes.
 class FieldInput extends ConsumerStatefulWidget {
   final MetaParam p;
   final Object? value;
@@ -37,6 +40,7 @@ class FieldInput extends ConsumerStatefulWidget {
   final bool readOnly;
   final String? hint;
   final bool optional;
+  final bool row;
 
   const FieldInput({
     super.key,
@@ -47,6 +51,7 @@ class FieldInput extends ConsumerStatefulWidget {
     this.readOnly = false,
     this.hint,
     this.optional = false,
+    this.row = false,
   });
 
   @override
@@ -55,6 +60,8 @@ class FieldInput extends ConsumerStatefulWidget {
 
 class _FieldInputState extends ConsumerState<FieldInput> {
   TextEditingController? _text;
+  // Rows light their label while typed into.
+  final FocusNode _focus = FocusNode();
   // The lookup label of the value it was resolved for.
   (String, String?)? _lookup;
 
@@ -65,7 +72,12 @@ class _FieldInputState extends ConsumerState<FieldInput> {
   void initState() {
     super.initState();
     if (_isTyped) _text = TextEditingController(text: _str);
+    _focus.addListener(_onFocus);
     _resolveLookup();
+  }
+
+  void _onFocus() {
+    if (widget.row && mounted) setState(() {});
   }
 
   bool get _isTyped => _kind == _Kind.text || _kind == _Kind.textarea || _kind == _Kind.number;
@@ -83,6 +95,7 @@ class _FieldInputState extends ConsumerState<FieldInput> {
   @override
   void dispose() {
     _text?.dispose();
+    _focus.dispose();
     super.dispose();
   }
 
@@ -175,9 +188,9 @@ class _FieldInputState extends ConsumerState<FieldInput> {
           widget.onChanged(ymd(day));
           return;
         }
-        final time = await showTimePicker(
-          context: context,
-          initialTime: current == null ? TimeOfDay.now() : TimeOfDay.fromDateTime(current),
+        final time = await showVioletTimePicker(
+          context,
+          initial: current == null ? null : TimeOfDay.fromDateTime(current),
         );
         if (time == null) return;
         String two(int n) => n.toString().padLeft(2, '0');
@@ -191,6 +204,7 @@ class _FieldInputState extends ConsumerState<FieldInput> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final p = widget.p;
+    if (widget.row) return _buildRow(context, l);
     switch (_kind) {
       case _Kind.boolean:
         final on = widget.value == true;
@@ -250,6 +264,136 @@ class _FieldInputState extends ConsumerState<FieldInput> {
             isEmpty: text.isEmpty,
             child: Text(text, maxLines: 2, overflow: TextOverflow.ellipsis),
           ),
+        );
+    }
+  }
+
+  // --- Row look --------------------------------------------------------------------------
+
+  /// The label on the left (cyan while typed into, red with an error), the value on the right, the
+  /// hint or error under them. Long-text fields put the text box under the label instead.
+  Widget _buildRow(BuildContext context, AppLocalizations l) {
+    final scheme = Theme.of(context).colorScheme;
+    final p = widget.p;
+    final error = widget.error;
+    final focused = _focus.hasFocus;
+    final labelColor = error != null ? scheme.error : (focused ? pillCyan : scheme.onSurfaceVariant);
+    final valueStyle = TextStyle(
+      fontSize: 15,
+      fontWeight: FontWeight.w500,
+      color: widget.readOnly ? scheme.onSurfaceVariant : scheme.onSurface,
+    );
+    final placeholderStyle = TextStyle(fontSize: 15, color: scheme.onSurfaceVariant.withValues(alpha: 0.55));
+    final label = Text(_label, maxLines: 2, overflow: TextOverflow.ellipsis,
+        style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w500, color: labelColor));
+    final note = error ?? widget.hint ?? (_kind == _Kind.other ? l.openOnWebTitle : null);
+
+    Widget shell({required Widget value, Widget? trailing, VoidCallback? onTap, bool stacked = false}) => InkWell(
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 52),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+                if (stacked) ...[
+                  Padding(padding: const EdgeInsets.only(right: 4), child: label),
+                  const SizedBox(height: 6),
+                  Padding(padding: const EdgeInsets.only(right: 4), child: value),
+                ] else
+                  Row(children: [
+                    // The label keeps up to about half the row; the value takes the rest.
+                    ConstrainedBox(constraints: const BoxConstraints(maxWidth: 170), child: label),
+                    const SizedBox(width: 12),
+                    Expanded(child: value),
+                    if (trailing != null) ...[const SizedBox(width: 6), trailing] else const SizedBox(width: 4),
+                  ]),
+                if (note != null) ...[
+                  const SizedBox(height: 4),
+                  Text(note, maxLines: 3, overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 12.5, color: error != null ? scheme.error : scheme.onSurfaceVariant)),
+                ],
+              ]),
+            ),
+          ),
+        );
+
+    Widget mutedIcon(IconData icon) => Icon(icon, size: 20, color: scheme.onSurfaceVariant);
+
+    switch (_kind) {
+      case _Kind.boolean:
+        final on = widget.value == true;
+        final change = widget.readOnly ? null : (bool b) => widget.onChanged(b);
+        return MergeSemantics(
+          child: shell(
+            value: const SizedBox.shrink(),
+            trailing: LiquidSwitch(value: on, onChanged: change),
+            onTap: change == null ? null : () => change(!on),
+          ),
+        );
+      case _Kind.text:
+      case _Kind.textarea:
+      case _Kind.number:
+        final long = _kind == _Kind.textarea;
+        return shell(
+          stacked: long,
+          onTap: widget.readOnly ? null : _focus.requestFocus,
+          value: TextField(
+            controller: _text,
+            focusNode: _focus,
+            readOnly: widget.readOnly,
+            textAlign: long ? TextAlign.start : TextAlign.end,
+            minLines: long ? 3 : 1,
+            maxLines: long ? 8 : 1,
+            style: valueStyle,
+            cursorColor: pillCyan,
+            keyboardType: switch (_kind) {
+              _Kind.textarea => TextInputType.multiline,
+              _Kind.number => TextInputType.numberWithOptions(decimal: p.dataType == 'decimal', signed: true),
+              _ => p.renderType == 'email' ? TextInputType.emailAddress : TextInputType.text,
+            },
+            decoration: InputDecoration.collapsed(
+              hintText: widget.readOnly ? null : l.fieldEnter,
+              hintStyle: placeholderStyle,
+            ),
+            onChanged: widget.onChanged,
+          ),
+        );
+      case _Kind.other:
+        return shell(value: Text(_str, maxLines: 3, overflow: TextOverflow.ellipsis, textAlign: TextAlign.end, style: valueStyle));
+      default:
+        final text = _display(l);
+        final canClear = !widget.readOnly && !p.isRequired && _str.isNotEmpty;
+        final icon = switch (_kind) {
+          _Kind.date || _Kind.datetime => Icons.calendar_today_outlined,
+          _Kind.lookup => Icons.search,
+          _ => Icons.chevron_right,
+        };
+        return shell(
+          onTap: widget.readOnly ? null : () => _pick(context),
+          value: Text(
+            text.isEmpty ? (widget.readOnly ? '' : l.choose) : text,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.end,
+            style: text.isEmpty ? placeholderStyle : valueStyle,
+          ),
+          trailing: widget.readOnly
+              ? null
+              : canClear
+                  // Not an IconButton: its 48 px tap target would make this row taller than the rest.
+                  ? Tooltip(
+                      message: l.clear,
+                      child: Semantics(
+                        button: true,
+                        label: l.clear,
+                        child: InkResponse(
+                          radius: 18,
+                          onTap: () => widget.onChanged(''),
+                          child: Padding(padding: const EdgeInsets.all(2), child: mutedIcon(Icons.close)),
+                        ),
+                      ),
+                    )
+                  : mutedIcon(icon),
         );
     }
   }

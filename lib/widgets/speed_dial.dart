@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../nav/pill_bar.dart' show pillCyan, pillViolet, springAt;
+import 'tones.dart';
 
 /// One option of [SpeedDialFab].
 class SpeedDialItem {
@@ -170,7 +171,7 @@ class _DialRoute extends PopupRoute<void> {
                   decoration: BoxDecoration(
                     color: scheme.inverseSurface,
                     borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.5),
+                    border: Border.all(color: scheme.hairline, width: 1.5),
                   ),
                   child: Text(item.label, style: TextStyle(color: scheme.onInverseSurface, fontSize: 13, fontWeight: FontWeight.w600)),
                 ),
@@ -195,9 +196,9 @@ class _DialRoute extends PopupRoute<void> {
                       height: 40,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: const Color(0xFF2A2840),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1.5),
-                        boxShadow: const [BoxShadow(color: Color(0x73000000), blurRadius: 10)],
+                        color: scheme.surfaceContainerHigh,
+                        border: Border.all(color: scheme.hairline, width: 1.5),
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: scheme.isDark ? 0.45 : 0.15), blurRadius: 10)],
                       ),
                       child: Icon(item.icon, color: item.color, size: 20),
                     ),

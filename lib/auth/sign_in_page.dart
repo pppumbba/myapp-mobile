@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/app_localizations.dart';
 import '../nav/pill_bar.dart' show pillCyan, pillViolet;
+import '../widgets/error_state.dart';
 import '../widgets/wand_mark.dart';
 import '../widgets/pull_refresh.dart';
+import '../widgets/skeleton.dart';
+import '../widgets/tones.dart';
 import 'session.dart';
 
 class SplashPage extends ConsumerWidget {
@@ -14,38 +17,55 @@ class SplashPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(sessionProvider);
     final l = AppLocalizations.of(context);
+    // Signed in before: the app's own shape (top bar, then cards) while the session comes back.
+    if (s.restoring && s.error == null) return const _ShellSkeleton();
+    final notifier = ref.read(sessionProvider.notifier);
     return Scaffold(
-      body: Center(
-        child: s.error != null && !s.loading
-            ? Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(s.error!, textAlign: TextAlign.center),
-                    const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: () => ref.read(sessionProvider.notifier).start(),
-                      child: Text(l.retry),
-                    ),
-                    if (s.restoring) ...[
-                      const SizedBox(height: 8),
-                      TextButton(
-                        onPressed: () => ref.read(sessionProvider.notifier).abandonRestore(),
-                        child: Text(l.signOut),
-                      ),
-                    ],
-                  ],
-                ),
-              )
-            : const Column(mainAxisSize: MainAxisSize.min, children: [
-                WandMark(size: 64),
+      body: s.error != null && !s.loading
+          ? SafeArea(
+              child: ErrorState(
+                top: const AppMark(size: 56),
+                message: s.error!,
+                offline: s.error == deviceStrings().serverUnreachable,
+                onRetry: notifier.start,
+                secondary: s.restoring ? (label: l.signOut, onPressed: notifier.abandonRestore) : null,
+              ),
+            )
+          : const Center(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                AppMark(size: 64),
                 SizedBox(height: 28),
                 RefreshRing(size: 30),
               ]),
-      ),
+            ),
     );
   }
+}
+
+class _ShellSkeleton extends StatelessWidget {
+  const _ShellSkeleton();
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        body: SafeArea(
+          bottom: false,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const Shimmer(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(16, 6, 16, 6),
+                child: Row(children: [
+                  Expanded(child: SkeletonBox(height: 44, radius: 22)),
+                  SizedBox(width: 10),
+                  SkeletonBox(width: 36, height: 36, radius: 18),
+                  SizedBox(width: 10),
+                  SkeletonBox(width: 36, height: 36, radius: 18),
+                ]),
+              ),
+            ),
+            const Expanded(child: CardListSkeleton()),
+          ]),
+        ),
+      );
 }
 
 class SignInPage extends ConsumerStatefulWidget {
@@ -83,8 +103,8 @@ class _SignInPageState extends ConsumerState<SignInPage> {
       suffixIcon: suffix,
       filled: true,
       fillColor: scheme.surfaceContainerHigh,
-      border: border(const Color(0x14FFFFFF)),
-      enabledBorder: border(const Color(0x14FFFFFF)),
+      border: border(scheme.hairline),
+      enabledBorder: border(scheme.hairline),
       focusedBorder: border(pillViolet, 1.5),
       errorBorder: border(scheme.error),
       focusedErrorBorder: border(scheme.error, 1.5),
@@ -119,7 +139,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                             borderRadius: BorderRadius.circular(18),
                             boxShadow: [BoxShadow(color: pillViolet.withValues(alpha: 0.35), blurRadius: 28, spreadRadius: 2)],
                           ),
-                          child: const WandMark(size: 72),
+                          child: const AppMark(size: 72),
                         ),
                       ),
                       const SizedBox(height: 28),
@@ -189,9 +209,9 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                             style: OutlinedButton.styleFrom(
                               foregroundColor: scheme.onSurface,
                               backgroundColor: scheme.surfaceContainerHigh,
-                              side: const BorderSide(color: Color(0x1FFFFFFF)),
+                              side: BorderSide(color: Theme.of(context).colorScheme.hairline),
                               shape: const StadiumBorder(),
-                              textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                              textStyle: const TextStyle(fontFamily: appFont, fontSize: 16, fontWeight: FontWeight.w600),
                             ),
                           ),
                         ),

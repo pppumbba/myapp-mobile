@@ -221,6 +221,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get today => 'Today';
 
   @override
+  String get now => 'Now';
+
+  @override
   String get tomorrow => 'Tomorrow';
 
   @override
@@ -235,4 +238,244 @@ class AppLocalizationsEn extends AppLocalizations {
   String daysAgo(int count) {
     return '$count days ago';
   }
+
+  @override
+  String get personalInfo => 'Personal info';
+
+  @override
+  String get personalInfoNote =>
+      'How you appear in the app, and the email you log in with.';
+
+  @override
+  String get name => 'Name';
+
+  @override
+  String get saveChanges => 'Save changes';
+
+  @override
+  String get appearance => 'Appearance';
+
+  @override
+  String get themeSystem => 'System';
+
+  @override
+  String get themeLight => 'Light';
+
+  @override
+  String get themeDark => 'Dark';
+
+  @override
+  String get language => 'Language';
+
+  @override
+  String get languageNote =>
+      'The language of screen names, field labels, buttons and statuses, where they have been translated.';
+
+  @override
+  String get languageAsPhone => 'As my phone is';
+
+  @override
+  String get customers => 'Customers';
+
+  @override
+  String get customersNote =>
+      'The companies you work in. Each has its own apps, people and data.';
+
+  @override
+  String get openNow => 'Open now';
+
+  @override
+  String get admin => 'Admin';
+
+  @override
+  String get currentPassword => 'Current password';
+
+  @override
+  String get newPassword => 'New password';
+
+  @override
+  String get confirmPassword => 'Confirm new password';
+
+  @override
+  String get passwordHint => 'At least 8 characters.';
+
+  @override
+  String get passwordsDontMatch => 'The passwords don\'t match.';
+
+  @override
+  String get changePassword => 'Change password';
+
+  @override
+  String get passwordChanged => 'Password changed';
+
+  @override
+  String get passwordNote =>
+      'Changing it signs you out everywhere else; you stay signed in here.';
+
+  @override
+  String get choose => 'Choose';
+
+  @override
+  String get edit => 'Edit';
+
+  @override
+  String get addLine => 'Add line';
+
+  @override
+  String get noLines => 'No lines yet';
+
+  @override
+  String get total => 'Total';
+
+  @override
+  String get removeLine => 'Remove this line?';
+
+  @override
+  String newLine(String name) {
+    return 'New: $name';
+  }
+
+  @override
+  String get done => 'Done';
+
+  @override
+  String addPicked(int count) {
+    return 'Add $count';
+  }
+
+  @override
+  String pickToWorkOn(String name) {
+    return 'Pick a $name to work on';
+  }
+
+  @override
+  String get recordNotLoaded => 'This record could not be loaded.';
+
+  @override
+  String get workspaceNoSections => 'This workspace has no sections yet.';
+
+  @override
+  String get workspaceNeedsForm =>
+      'This workspace needs a form for its record.';
+
+  @override
+  String get fieldEnter => 'Enter';
+
+  @override
+  String get inbox => 'Inbox';
+
+  @override
+  String get chats => 'Chats';
+
+  @override
+  String get newChat => 'New chat';
+
+  @override
+  String get noChats => 'No chats yet. Start one with +.';
+
+  @override
+  String get messageHint => 'Message';
+
+  @override
+  String get seen => 'Seen';
+
+  @override
+  String get typingNow => 'typing…';
+
+  @override
+  String get you => 'You';
+
+  @override
+  String get findPeople => 'Find people';
+
+  @override
+  String get sendFailed => 'Could not send. Try again.';
+
+  @override
+  String get send => 'Send';
+
+  @override
+  String get delivered => 'Delivered';
+
+  @override
+  String get noPeople => 'No one else is here yet.';
+
+  @override
+  String get noConnection => 'No connection';
+
+  @override
+  String get couldNotLoad => 'Couldn\'t load this';
+
+  @override
+  String get addFile => 'Add';
+
+  @override
+  String get replaceFile => 'Replace';
+
+  @override
+  String get removeFile => 'Remove file';
+
+  @override
+  String get noFiles => 'No files';
+
+  @override
+  String get takePhoto => 'Take photo';
+
+  @override
+  String get photoLibrary => 'Photo library';
+
+  @override
+  String get browseFiles => 'Browse files';
+
+  @override
+  String upTo(String size) {
+    return 'up to $size';
+  }
+
+  @override
+  String fileTypeNotAllowed(String name, String types) {
+    return '$name can\'t be added here. Allowed: $types';
+  }
+
+  @override
+  String fileTooBig(String name, String size) {
+    return '$name is too big. The limit is $size.';
+  }
+
+  @override
+  String fileLimit(int count) {
+    return 'This field takes at most $count files.';
+  }
+
+  @override
+  String get couldNotPick =>
+      'Couldn\'t get the file. Check the app\'s photo and file permissions.';
+
+  @override
+  String get noAppToOpen => 'No app on this phone opens this kind of file.';
+
+  @override
+  String get filesUploading => 'Wait for the files to finish uploading.';
+
+  @override
+  String get shareToChat => 'Share to chat';
+
+  @override
+  String get addNote => 'Add a note (optional)';
+
+  @override
+  String get people => 'People';
+
+  @override
+  String sharedWith(String name) {
+    return 'Shared with $name';
+  }
+
+  @override
+  String noPeopleFound(String query) {
+    return 'No one matches “$query”.';
+  }
+
+  @override
+  String get dragPickHint => 'Tip: hold a card and slide to pick several';
 }

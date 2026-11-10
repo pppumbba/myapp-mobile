@@ -245,4 +245,53 @@ void main() {
     expect(find.text('Acme'), findsOneWidget);
     expect(find.text('boom'), findsNothing);
   });
+
+  testWidgets('pickLookupMany: hold a card and slide to tick a span; sliding back unticks', (tester) async {
+    final names = ['Acme', 'Bolt', 'Cork', 'Dune', 'Echo'];
+    final (c, _) = setup({
+      '/api/metas/7': (_) => (200, {'id': 7, 'type': 'datagrid'}),
+      '/api/metas/7/params': (_) => (200, [
+            {'id': 1, 'param_name': 'name', 'label_name': 'Name', 'is_label': true, 'order_number': 1},
+          ]),
+      '/api/metas/7/data': (_) => (200, page([for (final (i, n) in names.indexed) {'id': i + 1, 'name': n}])),
+    });
+    List<Map<String, dynamic>>? picked;
+    await tester.pumpWidget(UncontrolledProviderScope(
+      container: c,
+      child: MaterialApp(
+        localizationsDelegates: const [AppLocalizations.delegate, GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(builder: (ctx) => TextButton(onPressed: () async => picked = await pickLookupMany(ctx, spec), child: const Text('open'))),
+      ),
+    ));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    expect(find.text('Tip: hold a card and slide to pick several'), findsOneWidget);
+
+    // Hold Bolt, slide down to Echo: Bolt..Echo ticked.
+    final g = await tester.startGesture(tester.getCenter(find.text('Bolt')));
+    await tester.pump(const Duration(milliseconds: 600));
+    await g.moveTo(tester.getCenter(find.text('Dune')));
+    await tester.pump();
+    await g.moveTo(tester.getCenter(find.text('Echo')));
+    await tester.pump();
+    expect(find.text('Add 4'), findsOneWidget);
+    // Back up to Cork: Dune and Echo drop out again.
+    await g.moveTo(tester.getCenter(find.text('Cork')));
+    await tester.pump();
+    await g.up();
+    await tester.pumpAndSettle();
+    expect(find.text('Add 2'), findsOneWidget);
+
+    // Holding a ticked card unticks as it slides.
+    final h = await tester.startGesture(tester.getCenter(find.text('Cork')));
+    await tester.pump(const Duration(milliseconds: 600));
+    await h.up();
+    await tester.pumpAndSettle();
+    expect(find.text('Add 1'), findsOneWidget);
+
+    await tester.tap(find.text('Add 1'));
+    await tester.pumpAndSettle();
+    expect([for (final r in picked!) r['name']], ['Bolt']);
+  });
 }

@@ -7,6 +7,7 @@ import 'package:wand_mobile/api/client.dart';
 import 'package:wand_mobile/api/models.dart';
 import 'package:wand_mobile/app.dart';
 import 'package:wand_mobile/auth/session.dart';
+import 'package:wand_mobile/chat/chat_api.dart';
 import 'package:wand_mobile/form/form_screen.dart';
 import 'package:wand_mobile/l10n/app_localizations.dart';
 import 'package:wand_mobile/meta/defs.dart';
@@ -16,6 +17,7 @@ import 'package:wand_mobile/nav/pill_bar.dart';
 import 'package:wand_mobile/nav/shell.dart';
 import 'package:wand_mobile/stage_query/stage_query_sheet.dart';
 import 'package:wand_mobile/widgets/inchworm_tabs.dart';
+import 'package:wand_mobile/widgets/row_group.dart';
 
 class SignedIn extends SessionController {
   @override
@@ -51,6 +53,7 @@ Future<(ProviderContainer, NotifierProvider<MenuHolder, MobileMenu>)> pumpShell(
   final holder = NotifierProvider<MenuHolder, MobileMenu>(() => MenuHolder(menu));
   final container = ProviderContainer(overrides: [
     notificationsProvider.overrideWith((ref) async => NotificationPage(const [], 0)),
+    chatListProvider.overrideWith((ref) async => const ChatList([], 0)),
     sessionProvider.overrideWith(SignedIn.new),
     mobileMenuProvider.overrideWith((ref) async {
       if (menuFails) throw ApiError(0, defaultUnreachableMessage);
@@ -257,11 +260,11 @@ void sectionTests() {
         entry(3, 'Stock'),
       ], const []);
 
-  testWidgets('top bar: no app name; menu search, notifications and profile', (tester) async {
+  testWidgets('top bar: no app name; menu search, inbox and profile', (tester) async {
     await pumpShell(tester, ops());
     expect(find.descendant(of: find.byType(AppBar), matching: find.text('Shop')), findsNothing);
     expect(find.byTooltip('Search screens'), findsOneWidget);
-    expect(find.byTooltip('Notifications'), findsOneWidget);
+    expect(find.byTooltip('Inbox'), findsOneWidget);
     expect(find.byTooltip('Account'), findsOneWidget);
   });
 
@@ -289,8 +292,8 @@ void sectionTests() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'ite');
     await tester.pump();
-    expect(find.widgetWithText(ListTile, 'Orders'), findsNothing);
-    await tester.tap(find.widgetWithText(ListTile, 'Items'));
+    expect(find.widgetWithText(IconRow, 'Orders'), findsNothing);
+    await tester.tap(find.widgetWithText(IconRow, 'Items'));
     await tester.pumpAndSettle();
     expect(find.text('M2'), findsOneWidget);
     expect(tester.widget<PillNavBar>(find.byType(PillNavBar)).selectedIndex, 0);

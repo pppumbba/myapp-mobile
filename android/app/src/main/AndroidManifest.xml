@@ -3,7 +3,7 @@
     <application
         android:label="${appName}"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="${appIcon}"
         android:allowBackup="false"
         android:enableOnBackInvokedCallback="true">
         <activity
@@ -54,6 +54,14 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- Opening a form's files in the app made for them (open_filex), and the camera (image_picker). -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:mimeType="*/*"/>
+        </intent>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE"/>
         </intent>
     </queries>
 </manifest>

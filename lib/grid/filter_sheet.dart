@@ -9,6 +9,7 @@ import '../form/values.dart';
 import '../l10n/app_localizations.dart';
 import 'cells.dart';
 import 'grid_query.dart';
+import '../widgets/pill_buttons.dart';
 import '../widgets/snap_sheet.dart';
 
 /// A filter's choices: options, Yes/No for booleans, else null (lookups use facet values).
@@ -180,14 +181,16 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
             ),
           ),
           Row(children: [
-            TextButton(onPressed: () => Navigator.of(context).pop(<String, String>{}), child: Text(l.clear)),
-            const Spacer(),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop({
-                for (final e in _draft.entries)
-                  if (e.value.isNotEmpty) e.key: e.value,
-              }),
-              child: Text(l.apply),
+            Expanded(child: SoftButton(onPressed: () => Navigator.of(context).pop(<String, String>{}), child: Text(l.clear))),
+            const SizedBox(width: 12),
+            Expanded(
+              child: GradientButton(
+                onPressed: () => Navigator.of(context).pop({
+                  for (final e in _draft.entries)
+                    if (e.value.isNotEmpty) e.key: e.value,
+                }),
+                child: Text(l.apply),
+              ),
             ),
           ]),
         ],

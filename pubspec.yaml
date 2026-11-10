@@ -43,6 +43,10 @@ dependencies:
     sdk: flutter
   flutter_web_auth_2: ^5.1.0
   crypto: ^3.0.8
+  image_picker: ^1.2.4
+  file_picker: ^13.3.3
+  open_filex: ^5.0.0
+  path_provider: ^2.1.6
 
 dev_dependencies:
   flutter_test:
@@ -67,6 +71,22 @@ flutter:
   # the material Icons class.
   uses-material-design: true
   generate: true
+
+  # Inter, the web app's font too (Latin and Cyrillic, so Mongolian Ө and Ү are covered).
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+        - asset: assets/fonts/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700
+
+  # The app meta's own icon, put here by tool/build_app.dart when it has one (see AppMark).
+  assets:
+    - assets/app/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

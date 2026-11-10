@@ -122,6 +122,33 @@ class ApiClient {
     return _send<T>('GET', '$prefix$path', query: query);
   }
 
+  /// Sends [form] (multipart) with [onProgress] (0–1) as it goes up; slow links get two minutes.
+  Future<T> upload<T>(String path, FormData form, {void Function(double)? onProgress}) async {
+    try {
+      final res = await dio.post<dynamic>(
+        path,
+        data: form,
+        options: _options().copyWith(sendTimeout: const Duration(minutes: 2), receiveTimeout: const Duration(minutes: 2)),
+        onSendProgress: onProgress == null ? null : (sent, total) => total > 0 ? onProgress(sent / total) : null,
+      );
+      for (final l in List.of(_writeListeners)) {
+        l();
+      }
+      return res.data as T;
+    } on DioException catch (e) {
+      throw _toError(e);
+    }
+  }
+
+  /// Saves what GET [path] returns to the file at [to] (signed in, so private files come too).
+  Future<void> download(String path, String to, {Map<String, dynamic>? query}) async {
+    try {
+      await dio.download(path, to, queryParameters: query, options: _options().copyWith(receiveTimeout: const Duration(minutes: 2)));
+    } on DioException catch (e) {
+      throw _toError(e);
+    }
+  }
+
   Future<T> post<T>(String path, Object? body) => _send<T>('POST', path, body: body);
   Future<T> put<T>(String path, Object? body) => _send<T>('PUT', path, body: body);
   Future<void> delete(String path) => _send<dynamic>('DELETE', path);
