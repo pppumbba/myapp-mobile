@@ -12,6 +12,7 @@ import '../l10n/app_localizations.dart';
 import '../meta/defs.dart';
 import '../nav/pill_bar.dart' show pillViolet;
 import '../widgets/edge_fade.dart';
+import '../widgets/empty_state.dart';
 import '../widgets/expanding_search.dart';
 import '../widgets/pill_buttons.dart';
 import '../widgets/skeleton.dart';
@@ -237,7 +238,15 @@ class _LookupPageState extends ConsumerState<LookupPage> {
     if (_error != null && _rows.isEmpty) {
       body = ErrorState.of(context, _error!, onRetry: _reset);
     } else if (_rows.isEmpty) {
-      body = _loading ? const CardListSkeleton() : Center(child: Text(l10n.noResults));
+      body = _loading
+          ? const CardListSkeleton()
+          : _search.text.trim().isEmpty
+              ? EmptyState.nothingYet(context)
+              : EmptyState.noMatches(context, onClear: () {
+                  _debounce?.cancel();
+                  _search.clear();
+                  _reset();
+                });
     } else {
       body = ListView.builder(
         controller: _scroll,

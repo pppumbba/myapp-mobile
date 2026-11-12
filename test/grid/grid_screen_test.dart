@@ -157,23 +157,69 @@ void main() {
     expect(find.byType(FilterSheet), findsOneWidget);
     expect(find.text('Status *'), findsOneWidget);
     // Facet counts show next to the options.
-    expect(find.text('Open (3)'), findsOneWidget);
+    expect(find.descendant(of: find.byType(FilterSheet), matching: find.text('Open')), findsOneWidget);
+    expect(find.descendant(of: find.byType(FilterSheet), matching: find.text('3')), findsOneWidget);
+  });
+
+  testWidgets('an empty grid says nothing is here yet and points to the + button', (tester) async {
+    await pumpGrid(tester, routes(data: (o) => {'data': [], 'current_page': 1, 'last_page': 1, 'total': 0}));
+    expect(find.text('Nothing here yet'), findsOneWidget);
+    expect(find.text('Tap + to add the first one.'), findsOneWidget);
+    expect(find.text('Clear search and filters'), findsNothing);
+  });
+
+  testWidgets('a filter that matches nothing offers to clear it', (tester) async {
+    final a = await pumpGrid(
+      tester,
+      routes(data: (o) => {'data': [], 'current_page': 1, 'last_page': 1, 'total': 0}),
+      filters: {'status': 'closed'},
+    );
+    expect(find.text('No results'), findsOneWidget);
+    expect(dataCalls(a).last.uri.queryParameters['filter[status]'], 'closed');
+    await tester.tap(find.text('Clear search and filters'));
+    await tester.pumpAndSettle();
+    expect(dataCalls(a).last.uri.queryParameters.containsKey('filter[status]'), false);
   });
 
   testWidgets('filter sheet applies a filter and shows a removable chip', (tester) async {
     final a = await pumpGrid(tester, routes());
     await tester.tap(find.byTooltip('Filter'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Open (3)'));
+    await tester.tap(find.descendant(of: find.byType(FilterSheet), matching: find.text('Open')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Apply'));
     await tester.pumpAndSettle();
     expect(dataCalls(a).last.uri.queryParameters['filter[status]'], 'open');
-    expect(find.widgetWithText(InputChip, 'Status: Open'), findsOneWidget);
-    await tester.tap(find.descendant(of: find.byType(InputChip), matching: find.byTooltip('Delete')));
+    expect(find.text('Status: Open'), findsOneWidget);
+    await tester.tap(find.byTooltip('Delete'));
     await tester.pumpAndSettle();
     expect(dataCalls(a).last.uri.queryParameters.containsKey('filter[status]'), false);
-    expect(find.widgetWithText(InputChip, 'Status: Open'), findsNothing);
+    expect(find.text('Status: Open'), findsNothing);
+  });
+
+  testWidgets('filter sheet sorts by a column, descending, and the sort pill drops it', (tester) async {
+    final a = await pumpGrid(tester, routes());
+    await tester.tap(find.byTooltip('Filter'));
+    await tester.pumpAndSettle();
+    final sheet = find.byType(FilterSheet);
+    expect(find.descendant(of: sheet, matching: find.text('Ascending')), findsNothing);
+    await tester.scrollUntilVisible(find.descendant(of: sheet, matching: find.text('Title')), 100,
+        scrollable: find.descendant(of: sheet, matching: find.byType(Scrollable)).first);
+    await tester.tap(find.descendant(of: sheet, matching: find.text('Title')));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.descendant(of: sheet, matching: find.text('Descending')), 100,
+        scrollable: find.descendant(of: sheet, matching: find.byType(Scrollable)).first);
+    await tester.tap(find.descendant(of: sheet, matching: find.text('Descending')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Apply'));
+    await tester.pumpAndSettle();
+    expect(dataCalls(a).last.uri.queryParameters['sort'], 'title');
+    expect(dataCalls(a).last.uri.queryParameters['dir'], 'desc');
+    expect(find.text('Sort by: Title ↓'), findsOneWidget);
+    await tester.tap(find.byTooltip('Delete'));
+    await tester.pumpAndSettle();
+    expect(dataCalls(a).last.uri.queryParameters.containsKey('sort'), false);
+    expect(find.text('Sort by: Title ↓'), findsNothing);
   });
 
   testWidgets('search is debounced and sent as search', (tester) async {
@@ -401,14 +447,14 @@ void lookupChipTests() {
           }))
       ..['POST /api/metas/1/touch'] = ((_) => (200, {'ok': true}));
     await pumpGrid(tester, r, filters: {'asset_id': '6'});
-    expect(find.widgetWithText(InputChip, 'Asset: Boiler'), findsOneWidget);
+    expect(find.text('Asset: Boiler'), findsOneWidget);
 
     // Any write clears the lookup cache. Not awaited first: the fake clock only moves on pumps.
     final write = lastClient.post<dynamic>('/metas/1/touch', {});
     await tester.pumpAndSettle();
     await write;
     await tester.pumpAndSettle();
-    expect(find.widgetWithText(InputChip, 'Asset: Boiler'), findsOneWidget);
+    expect(find.text('Asset: Boiler'), findsOneWidget);
     expect(find.textContaining('…'), findsNothing);
   });
 

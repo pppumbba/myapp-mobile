@@ -5,6 +5,31 @@ import '../l10n/app_localizations.dart';
 import '../nav/pill_bar.dart' show pillCyan, pillViolet;
 import 'pill_buttons.dart';
 
+/// The gradient disc with a white icon, in a faint halo of its own colour (error and empty states).
+class GlowDisc extends StatelessWidget {
+  final IconData icon;
+  final List<Color> colors;
+  const GlowDisc({super.key, required this.icon, this.colors = const [pillViolet, pillCyan]});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 104,
+        height: 104,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(shape: BoxShape.circle, color: colors.first.withValues(alpha: 0.1)),
+        child: Container(
+          width: 72,
+          height: 72,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: colors),
+            boxShadow: [BoxShadow(color: colors.first.withValues(alpha: 0.4), blurRadius: 22, offset: const Offset(0, 6))],
+          ),
+          child: Icon(icon, color: Colors.white, size: 34),
+        ),
+      );
+}
+
 /// A page or list that couldn't load, in the app's style: a glowing disc (violet → cyan with a
 /// cloud when the server can't be reached, pink → coral "!" for any other error, like the error
 /// banner), a title, the message, and Retry as the gradient pill. [secondary] goes under it as a
@@ -38,23 +63,7 @@ class ErrorState extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 360),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             if (top != null) ...[top!, const SizedBox(height: 36)],
-            // The disc in a faint halo of its own colour.
-            Container(
-              width: 104,
-              height: 104,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(shape: BoxShape.circle, color: colors.first.withValues(alpha: 0.1)),
-              child: Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: colors),
-                  boxShadow: [BoxShadow(color: colors.first.withValues(alpha: 0.4), blurRadius: 22, offset: const Offset(0, 6))],
-                ),
-                child: Icon(offline ? Icons.cloud_off_rounded : Icons.priority_high_rounded, color: Colors.white, size: 34),
-              ),
-            ),
+            GlowDisc(icon: offline ? Icons.cloud_off_rounded : Icons.priority_high_rounded, colors: colors),
             const SizedBox(height: 22),
             Text(offline ? l.noConnection : l.couldNotLoad,
                 textAlign: TextAlign.center, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),

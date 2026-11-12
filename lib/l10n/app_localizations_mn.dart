@@ -479,4 +479,31 @@ class AppLocalizationsMn extends AppLocalizations {
   @override
   String get dragPickHint =>
       'Зөвлөмж: картыг удаан дараад гулсуулж олныг сонгоно';
+
+  @override
+  String get noMatchesHint => 'Хайлт, шүүлтүүрт тохирох зүйл алга.';
+
+  @override
+  String get clearSearch => 'Хайлт, шүүлтүүр арилгах';
+
+  @override
+  String get sortBy => 'Эрэмбэлэх';
+
+  @override
+  String get sortOrder => 'Дараалал';
+
+  @override
+  String get ascending => 'Өсөхөөр';
+
+  @override
+  String get descending => 'Буурахаар';
+
+  @override
+  String get nothingYet => 'Одоогоор хоосон байна';
+
+  @override
+  String get nothingYetAdd => 'Эхнийхийг нэмэхийн тулд + дарна уу.';
+
+  @override
+  String get nothingYetHint => 'Бичлэг нэмэгдмэгц энд харагдана.';
 }

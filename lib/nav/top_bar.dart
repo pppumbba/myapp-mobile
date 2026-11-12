@@ -8,7 +8,9 @@ class TopBarButton extends StatelessWidget {
   final String tooltip;
   final Widget child;
   final VoidCallback onPressed;
-  const TopBarButton({super.key, required this.tooltip, required this.child, required this.onPressed});
+  /// 44 in the top bar; 48 beside a list's search bar, to match its height.
+  final double size;
+  const TopBarButton({super.key, required this.tooltip, required this.child, required this.onPressed, this.size = 44});
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +27,7 @@ class TopBarButton extends StatelessWidget {
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: onPressed,
-            child: SizedBox.square(dimension: 44, child: Center(child: child)),
+            child: SizedBox.square(dimension: size, child: Center(child: child)),
           ),
         ),
       ),

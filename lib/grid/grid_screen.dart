@@ -12,7 +12,9 @@ import '../form/values.dart';
 import '../l10n/app_localizations.dart';
 import '../meta/defs.dart';
 import '../nav/icons.dart';
-import '../nav/pill_bar.dart' show pillViolet;
+import '../nav/pill_bar.dart' show pillCyan, pillViolet;
+import '../nav/top_bar.dart' show TopBarButton;
+import '../widgets/tab_chip.dart';
 import '../nav/scroll_chrome.dart';
 import '../screens/screen_view.dart';
 import '../stage_query/stage_query_sheet.dart';
@@ -34,6 +36,7 @@ import '../widgets/row_group.dart';
 import '../chat/share_record.dart';
 import '../widgets/drop_toast.dart';
 import '../widgets/bin_icon.dart';
+import '../widgets/empty_state.dart';
 import '../widgets/error_state.dart';
 import '../widgets/pill_buttons.dart' show SoftButton;
 
@@ -270,6 +273,12 @@ class _GridScreenState extends ConsumerState<GridScreen> {
 
   List<MetaParam> get _filters => [for (final p in filterParams(_params)) if (!widget.fixed.containsKey(pathOf(p))) p];
 
+  /// The shown columns the list can be sorted by (files, lines and the like can't).
+  List<MetaParam> get _sortable {
+    const skip = {'detail', 'subgrid', 'singlefile', 'multifile', 'document', 'json', 'signature', 'widget', 'button'};
+    return [for (final p in _params) if (p.isShow && !skip.contains(p.dataType)) p];
+  }
+
   Future<void> _openFilters() async {
     final picked = await showFilterSheet(
       context,
@@ -277,10 +286,30 @@ class _GridScreenState extends ConsumerState<GridScreen> {
       filters: _filters,
       values: _q.filter,
       query: _q.toQuery(),
+      sortable: _sortable,
+      sort: _q.sort,
+      dir: _q.dir,
     );
     if (picked == null || !mounted) return;
-    _q.filter = picked;
+    _q.filter = picked.filter;
+    _q.sort = picked.sort;
+    _q.dir = picked.dir;
     _sheetShownForMissing = false;
+    _reload(fresh: true);
+  }
+
+  void _clearSearchAndFilters() {
+    _debounce?.cancel();
+    _searchText.clear();
+    _q.search = '';
+    _q.filter = {};
+    _sheetShownForMissing = false;
+    _reload(fresh: true);
+  }
+
+  void _clearSort() {
+    _q.sort = null;
+    _q.dir = 'asc';
     _reload(fresh: true);
   }
 
@@ -566,6 +595,7 @@ class _GridScreenState extends ConsumerState<GridScreen> {
             padding: const EdgeInsets.fromLTRB(16, 8, 4, 4),
             child: Row(children: [
               Expanded(child: ExpandingSearch(controller: _searchText, onChanged: _onSearch, hint: l.search, alwaysOpen: true)),
+              if (filters.isNotEmpty || _sortable.isNotEmpty) ...[const SizedBox(width: 8), _filterButton(l)],
               if (menu.isNotEmpty && !useDial)
                 PopupMenuButton<MetaAction>(
                   tooltip: l.actions,
@@ -576,7 +606,7 @@ class _GridScreenState extends ConsumerState<GridScreen> {
               if (menu.isEmpty || useDial) const SizedBox(width: 12),
             ]),
           ),
-          if (filters.isNotEmpty || _q.filter.isNotEmpty) _filterRow(filters, l),
+          if (_q.filter.values.any((v) => v.isNotEmpty) || _q.sort != null) _filterRow(filters, l),
           if (_footerText(l) case final f? when f.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
@@ -590,61 +620,67 @@ class _GridScreenState extends ConsumerState<GridScreen> {
     );
   }
 
-  /// One chip per filter field, scrolling sideways: tap to pick that field's value, × to drop it.
-  /// The first chip opens every filter at once (with counts); a filter set some other way
-  /// (a preset or a drill-down) gets its own removable chip at the end.
+  /// The filter button beside the search bar: the top bar's round tile, its icon in the search
+  /// icon's gradient, with how many filters are on.
+  Widget _filterButton(AppLocalizations l) {
+    final on = _q.filter.values.where((v) => v.isNotEmpty).length + (_q.sort == null ? 0 : 1);
+    return TopBarButton(
+      tooltip: l.filter,
+      size: 48,
+      onPressed: _openFilters,
+      child: Badge(
+        isLabelVisible: on > 0,
+        backgroundColor: pillCyan,
+        textColor: const Color(0xFF0B1020),
+        label: Text('$on', style: const TextStyle(fontWeight: FontWeight.w700)),
+        child: ShaderMask(
+          shaderCallback: (r) => const LinearGradient(colors: [pillViolet, pillCyan]).createShader(r),
+          child: const Icon(Icons.tune_rounded, size: 22, color: Colors.white),
+        ),
+      ),
+    );
+  }
+
+  /// The filters that are on, as pills scrolling sideways: tap one to change it, × to drop it. A
+  /// filter set some other way (a preset or a drill-down) on a field that isn't a filter can only
+  /// be dropped.
   Widget _filterRow(List<MetaParam> filters, AppLocalizations l) {
-    final scheme = Theme.of(context).colorScheme;
-    final paths = {for (final f in filters) pathOf(f)};
-    Widget chip({required String label, required bool on, VoidCallback? onTap, VoidCallback? onClear}) => InputChip(
-          label: Row(mainAxisSize: MainAxisSize.min, children: [
-            ConstrainedBox(constraints: const BoxConstraints(maxWidth: 180), child: Text(label, overflow: TextOverflow.ellipsis)),
-            if (!on) const Icon(Icons.arrow_drop_down, size: 18),
-          ]),
-          selected: on,
-          showCheckmark: false,
-          selectedColor: pillViolet.withValues(alpha: 0.28),
-          side: BorderSide(color: on ? pillViolet : scheme.outlineVariant),
-          onPressed: onTap,
-          onDeleted: on ? onClear : null,
+    final byPath = {for (final f in filters) pathOf(f): f};
+    final lookups = ref.read(lookupServiceProvider);
+    final remove = MaterialLocalizations.of(context).deleteButtonTooltip;
+    Widget pill(String label, VoidCallback? onTap, VoidCallback onRemove) => Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: Center(
+            child: TabChip(
+              label: label,
+              onTap: onTap,
+              selected: true,
+              trailing: Semantics(
+                button: true,
+                label: remove,
+                child: Tooltip(message: remove, child: GestureDetector(onTap: onRemove, child: const Icon(Icons.close_rounded))),
+              ),
+            ),
+          ),
         );
+    final sortBy = _sortable.where((p) => p.paramName == _q.sort).firstOrNull;
     return SizedBox(
-      height: 48,
+      height: 44,
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
-          if (filters.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: Center(
-                child: IconButton.filledTonal(
-                  tooltip: l.filter,
-                  onPressed: _openFilters,
-                  icon: Badge(isLabelVisible: _q.filter.isNotEmpty, label: Text('${_q.filter.length}'), child: const Icon(Icons.tune, size: 20)),
-                ),
-              ),
-            ),
-          for (final fp in filters)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: Center(
-                child: chip(
-                  label: switch (_q.filter[pathOf(fp)]) {
-                    final v? => '${fp.label}: ${filterValueText(fp, v, l: l, lookups: ref.read(lookupServiceProvider))}',
-                    null => fp.label,
-                  },
-                  on: _q.filter.containsKey(pathOf(fp)),
-                  onTap: () => _openFilter(fp),
-                  onClear: () => _removeFilter(pathOf(fp)),
-                ),
-              ),
-            ),
+          if (_q.sort != null)
+            pill('${l.sortBy}: ${sortBy?.label ?? _q.sort} ${_q.dir == 'desc' ? '↓' : '↑'}', _openFilters, _clearSort),
           for (final e in _q.filter.entries)
-            if (!paths.contains(e.key))
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: Center(child: chip(label: '${_labelOf(e.key)}: ${e.value}', on: true, onClear: () => _removeFilter(e.key))),
+            if (e.value.isNotEmpty)
+              pill(
+                switch (byPath[e.key]) {
+                  final fp? => '${fp.label}: ${filterValueText(fp, e.value, l: l, lookups: lookups)}',
+                  null => '${_labelOf(e.key)}: ${e.value}',
+                },
+                byPath[e.key] == null ? null : () => _openFilter(byPath[e.key]!),
+                () => _removeFilter(e.key),
               ),
         ],
       ),
@@ -657,7 +693,7 @@ class _GridScreenState extends ConsumerState<GridScreen> {
     final picked = await showFilterSheet(context, gridMetaId: widget.metaId, filters: [fp], values: _q.filter, query: _q.toQuery());
     if (picked == null || !mounted) return;
     _q.filter = {..._q.filter}..remove(path);
-    if (picked[path] case final v? when v.isNotEmpty) _q.filter = {..._q.filter, path: v};
+    if (picked.filter[path] case final v? when v.isNotEmpty) _q.filter = {..._q.filter, path: v};
     _sheetShownForMissing = false;
     _reload(fresh: true);
   }
@@ -694,13 +730,19 @@ class _GridScreenState extends ConsumerState<GridScreen> {
       return scrollable(ErrorState.of(context, _error!, onRetry: _reload));
     }
     if (_missing.isNotEmpty) {
-      return scrollable(_Message(
-        text: l.filterFirst(_missing.map(_labelOf).join(', ')),
-        action: FilledButton.tonal(onPressed: _openFilters, child: Text(l.filter)),
+      return scrollable(EmptyState(
+        icon: Icons.tune_rounded,
+        title: l.filter,
+        message: l.filterFirst(_missing.map(_labelOf).join(', ')),
+        action: (label: l.filter, icon: Icons.tune_rounded, onPressed: _openFilters),
       ));
     }
     if (_rows.isEmpty) {
-      return scrollable(_loading || !_started ? const CardListSkeleton() : _Message(text: l.noResults));
+      if (_loading || !_started) return scrollable(const CardListSkeleton());
+      final narrowed = _q.search.trim().isNotEmpty || _q.filter.values.any((v) => v.isNotEmpty);
+      return scrollable(narrowed
+          ? EmptyState.noMatches(context, onClear: _clearSearchAndFilters)
+          : EmptyState.nothingYet(context, canAdd: addAction(all, can: _can, gridMetaId: widget.metaId) != null));
     }
 
     final more = _q.page < _lastPage || _loadingMore || _error != null;

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../nav/pill_bar.dart' show pillCyan, pillViolet;
+import 'tones.dart';
 
 double _seg(double x, double a, double b) => ((x - a) / (b - a)).clamp(0.0, 1.0);
 double _easeIO(double k) {
@@ -116,23 +117,16 @@ class _ExpandingSearchState extends State<ExpandingSearch> with SingleTickerProv
             final ga = 1 - _seg(ec, 0, 0.4); // the coloured button fading into the bar
             final open = ec > 0.6;
             final textA = _seg(ec, 0.8, 1);
-            // On the light page the open bar keeps a quiet rim (like the menu search), brighter while typing.
-            final light = Theme.of(context).brightness == Brightness.light;
-            final rim = ec * (light ? (_focus.hasFocus ? 0.7 : 0.28) : 1);
 
             final bar = Container(
               width: w,
               height: h,
-              padding: const EdgeInsets.all(2),
+              // The open bar has the top bar buttons' faint rim (like the bell); only the round button glows.
+              padding: const EdgeInsets.all(1),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(h / 2),
-                gradient: LinearGradient(colors: [
-                  pillViolet.withValues(alpha: rim),
-                  pillCyan.withValues(alpha: rim),
-                ]),
+                color: Color.lerp(Colors.transparent, scheme.hairline, ec),
                 boxShadow: [
-                  // Kept small: the title bar above would cut off a wider glow.
-                  if (ec > 0 && (!light || _focus.hasFocus)) BoxShadow(color: pillViolet.withValues(alpha: (light ? 0.1 : 0.18) * ec), blurRadius: 6),
                   if (ga > 0) BoxShadow(color: pillViolet.withValues(alpha: 0.4 * ga), blurRadius: 8, offset: const Offset(0, 3)),
                 ],
               ),

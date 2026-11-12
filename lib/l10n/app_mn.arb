@@ -142,5 +142,14 @@
   "people": "Хүмүүс",
   "sharedWith": "{name}-д илгээлээ",
   "noPeopleFound": "“{query}” гэх хүн олдсонгүй.",
-  "fieldEnter": "Оруулах"
+  "fieldEnter": "Оруулах",
+  "noMatchesHint": "Хайлт, шүүлтүүрт тохирох зүйл алга.",
+  "clearSearch": "Хайлт, шүүлтүүр арилгах",
+  "sortBy": "Эрэмбэлэх",
+  "sortOrder": "Дараалал",
+  "ascending": "Өсөхөөр",
+  "descending": "Буурахаар",
+  "nothingYet": "Одоогоор хоосон байна",
+  "nothingYetAdd": "Эхнийхийг нэмэхийн тулд + дарна уу.",
+  "nothingYetHint": "Бичлэг нэмэгдмэгц энд харагдана."
 }

@@ -478,4 +478,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dragPickHint => 'Tip: hold a card and slide to pick several';
+
+  @override
+  String get noMatchesHint => 'Nothing matches the search or filters.';
+
+  @override
+  String get clearSearch => 'Clear search and filters';
+
+  @override
+  String get sortBy => 'Sort by';
+
+  @override
+  String get sortOrder => 'Order';
+
+  @override
+  String get ascending => 'Ascending';
+
+  @override
+  String get descending => 'Descending';
+
+  @override
+  String get nothingYet => 'Nothing here yet';
+
+  @override
+  String get nothingYetAdd => 'Tap + to add the first one.';
+
+  @override
+  String get nothingYetHint => 'Records show up here once they are added.';
 }

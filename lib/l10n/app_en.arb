@@ -222,5 +222,14 @@
   "noPeopleFound": "No one matches “{query}”.",
   "@noPeopleFound": {"placeholders": {"query": {"type": "String"}}},
   "dragPickHint": "Tip: hold a card and slide to pick several",
-  "@fieldEnter": {"description": "Placeholder on the right of an empty text row in a form"}
+  "@fieldEnter": {"description": "Placeholder on the right of an empty text row in a form"},
+  "noMatchesHint": "Nothing matches the search or filters.",
+  "clearSearch": "Clear search and filters",
+  "sortBy": "Sort by",
+  "sortOrder": "Order",
+  "ascending": "Ascending",
+  "descending": "Descending",
+  "nothingYet": "Nothing here yet",
+  "nothingYetAdd": "Tap + to add the first one.",
+  "nothingYetHint": "Records show up here once they are added."
 }

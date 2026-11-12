@@ -955,6 +955,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tip: hold a card and slide to pick several'**
   String get dragPickHint;
+
+  /// No description provided for @noMatchesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing matches the search or filters.'**
+  String get noMatchesHint;
+
+  /// No description provided for @clearSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear search and filters'**
+  String get clearSearch;
+
+  /// No description provided for @sortBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort by'**
+  String get sortBy;
+
+  /// No description provided for @sortOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Order'**
+  String get sortOrder;
+
+  /// No description provided for @ascending.
+  ///
+  /// In en, this message translates to:
+  /// **'Ascending'**
+  String get ascending;
+
+  /// No description provided for @descending.
+  ///
+  /// In en, this message translates to:
+  /// **'Descending'**
+  String get descending;
+
+  /// No description provided for @nothingYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here yet'**
+  String get nothingYet;
+
+  /// No description provided for @nothingYetAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap + to add the first one.'**
+  String get nothingYetAdd;
+
+  /// No description provided for @nothingYetHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Records show up here once they are added.'**
+  String get nothingYetHint;
 }
 
 class _AppLocalizationsDelegate
